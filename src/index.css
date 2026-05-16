@@ -1,0 +1,61 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,700;1,400;1,700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Noto Serif", serif;
+  --font-sans: "Plus Jakarta Sans", sans-serif;
+
+  /* Organic Color Palette */
+  --color-primary: #0d631b;
+  --color-primary-container: #2e7d32;
+  --color-primary-fixed: #a3f69c;
+  --color-on-primary: #ffffff;
+  
+  --color-secondary: #7a5649;
+  --color-secondary-container: #fdcdbc;
+  --color-on-secondary-container: #795548;
+  
+  --color-tertiary: #7a4a00;
+  --color-tertiary-container: #9c6000;
+  --color-tertiary-fixed: #ffddba;
+  
+  --color-surface: #fafaef;
+  --color-surface-bright: #fafaef;
+  --color-surface-container-low: #f4f4e9;
+  --color-surface-container-high: #e9e9de;
+  --color-surface-container-highest: #e3e3d8;
+  --color-surface-container-lowest: #ffffff;
+  
+  --color-on-surface: #1a1c16;
+  --color-on-surface-variant: #40493d;
+  --color-outline: #707a6c;
+  --color-outline-variant: #bfcaba;
+}
+
+@utility glass-nav {
+  background-color: rgb(250 250 239 / 0.8);
+  backdrop-filter: blur(20px);
+}
+
+@layer base {
+  html {
+    font-size: 80%;
+  }
+  
+  body {
+    @apply font-sans bg-surface text-on-surface;
+  }
+  
+  h1, h2, h3, h4, .font-serif {
+    @apply font-serif;
+  }
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+

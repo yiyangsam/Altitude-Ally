@@ -1,0 +1,198 @@
+import { motion, AnimatePresence } from 'motion/react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../lib/AuthContext';
+import { User, Lock, ArrowRight, ShieldCheck, Eye, EyeOff, UserPlus, AlertCircle } from 'lucide-react';
+import { useState } from 'react';
+
+export default function CustomerLoginPage() {
+  const { login, register } = useAuth();
+  const navigate = useNavigate();
+  const [showPassword, setShowPassword] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg(null);
+    setLoading(true);
+
+    if (isSignUp) {
+      if (!name) {
+        setErrorMsg("Please provide your name.");
+        setLoading(false);
+        return;
+      }
+      const response = await register(name, email, password);
+      // @ts-ignore
+      if (response?.error) {
+        // @ts-ignore
+        setErrorMsg(response.error.message);
+      } else {
+        navigate('/account');
+      }
+    } else {
+      const response = await login(email, password);
+      // @ts-ignore
+      if (response?.error) {
+        // @ts-ignore
+        setErrorMsg(response.error.message);
+      } else {
+        navigate('/account');
+      }
+    }
+
+    setLoading(false);
+  };
+
+  return (
+    <div className="min-h-screen bg-surface flex flex-col md:flex-row">
+      {/* Brand Panel */}
+      <div className="hidden md:flex md:w-1/2 bg-primary relative overflow-hidden items-center justify-center p-24">
+        <div className="relative z-10 text-on-primary">
+          <div className="flex items-center gap-3 mb-8">
+            <img src="/logo.png" className="w-40 h-40" alt="Altitude Ally Logo" />
+            <span className="text-3xl font-bold tracking-tighter">Altitude Ally</span>
+          </div>
+          <h1 className="text-6xl font-bold font-serif italic mb-6 leading-tight">Welcome back, neighbor.</h1>
+          <p className="text-xl opacity-80 leading-relaxed font-light max-w-lg">
+            Join the collective effort to sustain our mountain communities. Log in to manage your harvests and view your local impact.
+          </p>
+        </div>
+        {/* Decorative elements */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-black/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"></div>
+      </div>
+
+      {/* Form Panel */}
+      <div className="flex-1 flex items-center justify-center p-3 md:p-24 bg-surface-container-lowest">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-sm"
+        >
+          <div className="md:hidden flex flex-col items-center mb-6">
+            <img src="/logo.png" className="w-40 h-40 mb-2" alt="Altitude Ally Logo" />
+            <h2 className="text-xl font-bold font-serif italic text-primary">Altitude Ally</h2>
+          </div>
+
+          <h3 className="text-2xl md:text-4xl font-bold text-on-surface mb-1 font-serif">
+            {isSignUp ? "Create Account" : "Sign In"}
+          </h3>
+          <p className="text-on-surface-variant mb-6 text-xs md:text-base">
+            {isSignUp ? "Join our organic collective." : "Access your community harvest account."}
+          </p>
+
+          <AnimatePresence>
+            {errorMsg && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="bg-error/10 text-error p-4 rounded-xl flex items-center gap-2 text-sm mb-6 font-bold"
+              >
+                <AlertCircle size={20} />
+                {errorMsg}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
+
+            <AnimatePresence>
+              {isSignUp && (
+                <motion.div
+                  className="space-y-1 md:space-y-2 overflow-hidden"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                >
+                  <label className="text-[10px] md:text-sm font-bold text-secondary uppercase tracking-widest ml-1">Full Name</label>
+                  <div className="relative group">
+                    <UserPlus className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-primary transition-colors w-4 h-4 md:w-5 md:h-5" />
+                    <input
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="w-full pl-11 pr-4 py-3 md:py-4 rounded-xl md:rounded-2xl bg-surface-container-low border-2 border-transparent focus:border-primary focus:bg-white transition-all outline-none text-sm md:text-base"
+                      placeholder="John Highland"
+                      type="text"
+                    />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div className="space-y-1 md:space-y-2">
+              <label className="text-[10px] md:text-sm font-bold text-secondary uppercase tracking-widest ml-1">Email Address</label>
+              <div className="relative group">
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-primary transition-colors w-4 h-4 md:w-5 md:h-5" />
+                <input
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3 md:py-4 rounded-xl md:rounded-2xl bg-surface-container-low border-2 border-transparent focus:border-primary focus:bg-white transition-all outline-none text-sm md:text-base"
+                  placeholder="Enter your email"
+                  type="email"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1 md:space-y-2">
+              <div className="flex justify-between items-center ml-1">
+                <label className="text-[10px] md:text-sm font-bold text-secondary uppercase tracking-widest">Password</label>
+                {!isSignUp && (
+                  <button type="button" className="text-[10px] md:text-xs text-primary font-bold hover:underline">Forgot?</button>
+                )}
+              </div>
+              <div className="relative group">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-primary transition-colors w-4 h-4 md:w-5 md:h-5" />
+                <input
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-11 pr-11 py-3 md:py-4 rounded-xl md:rounded-2xl bg-surface-container-low border-2 border-transparent focus:border-primary focus:bg-white transition-all outline-none text-sm md:text-base"
+                  placeholder="••••••••"
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors p-1"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4 md:w-5 md:h-5" /> : <Eye className="w-4 h-4 md:w-5 md:h-5" />}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3.5 md:py-5 rounded-xl md:rounded-2xl bg-primary text-on-primary font-bold text-base md:text-xl shadow-xl hover:shadow-primary/20 hover:scale-[1.02] transition-all active:scale-95 flex items-center justify-center gap-2 opacity-100 disabled:opacity-50"
+            >
+              {loading ? 'Processing...' : (isSignUp ? 'Create Account' : 'Sign In')}
+              {!loading && <ArrowRight className="w-4 h-4 md:w-6 md:h-6" />}
+            </button>
+          </form>
+
+          <p className="text-center mt-8 text-on-surface-variant text-[10px] md:text-sm italic">
+            {isSignUp ? "Already a member?" : "Don't have an account?"}
+            <button
+              type="button"
+              onClick={() => {
+                setIsSignUp(!isSignUp);
+                setErrorMsg(null);
+              }}
+              className="text-primary font-bold not-italic hover:underline ml-1"
+            >
+              {isSignUp ? "Sign In" : "Join Collective"}
+            </button>
+          </p>
+        </motion.div>
+      </div>
+    </div>
+  );
+}

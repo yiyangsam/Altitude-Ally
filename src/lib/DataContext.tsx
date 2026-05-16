@@ -1,0 +1,286 @@
+import React, { createContext, useContext, useState, useEffect } from 'react';
+
+export interface Product {
+  id: string; // Postgres UUID
+  name: string;
+  price: number;
+  unit: string;
+  description: string;
+  category: string;
+  image: string;
+}
+
+export interface Order {
+  id: string;
+  customerName: string;
+  date: string;
+  total: number;
+  items: string[];
+  status: 'Pending' | 'Delivered' | 'Processing' | 'Completed';
+}
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: 'Customer' | 'Volunteer' | 'Donor';
+  joinedDate: string;
+}
+
+export interface Category {
+  id: string;
+  name: string;
+}
+
+export interface ImpactProject {
+  id: string;
+  title: string;
+  tag: string;
+  amount: string;
+  status: 'Active' | 'Wait' | 'Done';
+  image: string;
+}
+
+export interface PaymentConfig {
+  qr_image: string;
+  bank_info: string;
+}
+
+export interface ImpactPageConfig {
+  hero_title: string;
+  hero_description: string;
+  families_served: string;
+  transparency_stats: { label: string; value: number; color: string }[];
+}
+
+interface DataContextType {
+  products: Product[];
+  orders: Order[];
+  users: User[];
+  categories: Category[];
+  impactProjects: ImpactProject[];
+  addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
+  updateProduct: (id: string, updates: Partial<Product>) => Promise<void>;
+  deleteProduct: (id: string) => Promise<void>;
+  addOrder: (order: Omit<Order, 'id' | 'date' | 'status'>) => Promise<void>;
+  updateOrder: (id: string, updates: Partial<Order>) => Promise<void>;
+  addCategory: (category: string) => Promise<void>;
+  deleteCategory: (name: string) => Promise<void>;
+  addImpactProject: (project: Omit<ImpactProject, 'id'>) => Promise<void>;
+  updateImpactProject: (id: string, updates: Partial<ImpactProject>) => Promise<void>;
+  deleteImpactProject: (id: string) => Promise<void>;
+  paymentConfig: PaymentConfig | null;
+  updatePaymentConfig: (config: PaymentConfig) => Promise<void>;
+  impactPageConfig: ImpactPageConfig | null;
+  updateImpactPageConfig: (config: ImpactPageConfig) => Promise<void>;
+  isLoading: boolean;
+}
+
+const DataContext = createContext<DataContextType | undefined>(undefined);
+
+export function DataProvider({ children }: { children: React.ReactNode }) {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [impactProjects, setImpactProjects] = useState<ImpactProject[]>([]);
+  const [paymentConfig, setPaymentConfig] = useState<PaymentConfig | null>(null);
+  const [impactPageConfig, setImpactPageConfig] = useState<ImpactPageConfig | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [prodRes, catRes, ordRes, usrRes, impactRes, paymentRes, pageConfigRes] = await Promise.all([
+          fetch('/api/products'),
+          fetch('/api/categories'),
+          fetch('/api/orders'),
+          fetch('/api/users'),
+          fetch('/api/impact/projects'),
+          fetch('/api/payment/config'),
+          fetch('/api/impact/page_config')
+        ]);
+        if (prodRes.ok) setProducts(await prodRes.json());
+        if (catRes.ok) setCategories(await catRes.json());
+        if (ordRes.ok) setOrders(await ordRes.json());
+        if (usrRes.ok) setUsers(await usrRes.json());
+        if (impactRes.ok) setImpactProjects(await impactRes.json());
+        if (paymentRes.ok) setPaymentConfig(await paymentRes.json());
+        if (pageConfigRes.ok) setImpactPageConfig(await pageConfigRes.json());
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const addProduct = async (product: Omit<Product, 'id'>) => {
+    const res = await fetch('/api/products', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(product)
+    });
+    if (res.ok) {
+      const newProduct = await res.json();
+      setProducts(prev => [newProduct, ...prev]);
+    }
+  };
+
+  const updateProduct = async (id: string, updates: Partial<Product>) => {
+    const res = await fetch(`/api/products/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates)
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setProducts(prev => prev.map(p => p.id === id ? updated : p));
+    }
+  };
+
+  const deleteProduct = async (id: string) => {
+    const res = await fetch(`/api/products/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      setProducts(prev => prev.filter(p => p.id !== id));
+    }
+  };
+
+  const addOrder = async (orderData: Omit<Order, 'id' | 'date' | 'status'>) => {
+    const newOrderData = {
+      ...orderData,
+      date: new Date().toISOString(),
+      status: 'Pending'
+    };
+    const res = await fetch('/api/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newOrderData)
+    });
+    if (res.ok) {
+      const createdOrder = await res.json();
+      setOrders(prev => [createdOrder, ...prev]);
+    }
+  };
+
+  const updateOrder = async (id: string, updates: Partial<Order>) => {
+    const res = await fetch(`/api/orders/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates)
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setOrders(prev => prev.map(o => o.id === id ? updated : o));
+    }
+  };
+
+  const addCategory = async (name: string) => {
+    const res = await fetch('/api/categories', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name })
+    });
+    if (res.ok) {
+      const newCategory = await res.json();
+      setCategories(prev => [...prev, newCategory]);
+    }
+  };
+
+  const deleteCategory = async (name: string) => {
+    const res = await fetch(`/api/categories/${name}`, { method: 'DELETE' });
+    if (res.ok) {
+      setCategories(prev => prev.filter(c => c.name !== name));
+    }
+  };
+
+  const addImpactProject = async (project: Omit<ImpactProject, 'id'>) => {
+    const res = await fetch('/api/impact/projects', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(project)
+    });
+    if (res.ok) {
+      const newProject = await res.json();
+      setImpactProjects(prev => [newProject, ...prev]);
+    }
+  };
+
+  const updateImpactProject = async (id: string, updates: Partial<ImpactProject>) => {
+    const res = await fetch(`/api/impact/projects/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates)
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setImpactProjects(prev => prev.map(p => p.id === id ? updated : p));
+    }
+  };
+
+  const deleteImpactProject = async (id: string) => {
+    const res = await fetch(`/api/impact/projects/${id}`, { method: 'DELETE'    });
+    if (res.ok) {
+      setImpactProjects(impactProjects.filter(p => p.id !== id));
+    }
+  };
+
+  const updatePaymentConfig = async (config: PaymentConfig) => {
+    const res = await fetch('/api/payment/config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config)
+    });
+    if (res.ok) {
+      setPaymentConfig(await res.json());
+    }
+  };
+
+  const updateImpactPageConfig = async (config: ImpactPageConfig) => {
+    const res = await fetch('/api/impact/page_config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config)
+    });
+    if (res.ok) {
+      setImpactPageConfig(await res.json());
+    }
+  };
+
+  return (
+    <DataContext.Provider value={{ 
+      products, 
+      orders, 
+      users, 
+      categories, 
+      impactProjects,
+      paymentConfig,
+      impactPageConfig,
+      addProduct, 
+      updateProduct, 
+      deleteProduct, 
+      addOrder, 
+      updateOrder, 
+      addCategory, 
+      deleteCategory,
+      addImpactProject,
+      updateImpactProject,
+      deleteImpactProject,
+      updatePaymentConfig,
+      updateImpactPageConfig,
+      isLoading 
+    }}>
+      {children}
+    </DataContext.Provider>
+  );
+}
+
+export function useData() {
+  const context = useContext(DataContext);
+  if (context === undefined) {
+    throw new Error('useData must be used within a DataProvider');
+  }
+  return context;
+}
