@@ -241,6 +241,10 @@ app.put('/api/impact/page_config', async (req, res) => {
   res.json(data[0]);
 });
 
-app.listen(port, () => {
-  console.log(`Backend server listening at http://localhost:${port}`);
-});
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(port, () => {
+    console.log(`Backend server listening at http://localhost:${port}`);
+  });
+}
+
+export default app;
