@@ -6,3 +6,8 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Local setup and manual upload artifacts
+.tools/
+Altitude-Ally-V2/
+Altitude-Ally-V2.zip

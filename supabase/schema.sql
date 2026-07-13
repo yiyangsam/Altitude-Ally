@@ -107,3 +107,15 @@ insert into public.impact_page_config (id, hero_title, hero_description, familie
   '800+', 
   '[{"label":"Garden Infrastructure","value":65,"color":"bg-primary"},{"label":"Seed Distribution","value":25,"color":"bg-primary-fixed-dim"},{"label":"Community Workshops","value":10,"color":"bg-tertiary-fixed-dim"}]'::jsonb
 );
+
+-- Market Page Config Table
+create table public.market_page_config (
+  id integer primary key default 1,
+  hero_image_url text not null
+);
+
+-- Seed initial market page config
+insert into public.market_page_config (id, hero_image_url) values (
+  1,
+  'https://images.unsplash.com/photo-1610348725531-843dff563e2c?auto=format&fit=crop&q=80&w=2000'
+);
