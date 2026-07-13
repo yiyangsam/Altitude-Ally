@@ -40,7 +40,7 @@ export default function ResetPasswordPage() {
             Forgot <br/>Password?
           </h1>
           <p className="text-on-surface-variant text-xl leading-relaxed max-w-md mx-auto font-sans">
-            Enter your email address and we'll send you instructions to reset your password and reclaim your garden account.
+            Enter your email address and we'll send you instructions to reset your password and reclaim your account.
           </p>
         </div>
 
