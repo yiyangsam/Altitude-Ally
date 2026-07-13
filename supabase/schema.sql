@@ -9,9 +9,17 @@ create table public.products (
   unit text not null,
   category text not null,
   description text,
+  details text,
+  variations jsonb not null default '[]'::jsonb,
+  portions jsonb not null default '[]'::jsonb,
   image text,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+-- Existing projects can run these safely to add product detail options.
+alter table public.products add column if not exists details text;
+alter table public.products add column if not exists variations jsonb not null default '[]'::jsonb;
+alter table public.products add column if not exists portions jsonb not null default '[]'::jsonb;
 
 -- Orders Table
 create table public.orders (

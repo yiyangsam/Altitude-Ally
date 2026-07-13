@@ -6,8 +6,11 @@ export interface Product {
   price: number;
   unit: string;
   description: string;
+  details?: string;
   category: string;
   image: string;
+  variations?: string[];
+  portions?: string[];
 }
 
 export interface Order {
@@ -54,6 +57,10 @@ export interface ImpactPageConfig {
   transparency_stats: { label: string; value: number; color: string }[];
 }
 
+export interface MarketPageConfig {
+  hero_image_url: string;
+}
+
 interface DataContextType {
   products: Product[];
   orders: Order[];
@@ -74,6 +81,8 @@ interface DataContextType {
   updatePaymentConfig: (config: PaymentConfig) => Promise<void>;
   impactPageConfig: ImpactPageConfig | null;
   updateImpactPageConfig: (config: ImpactPageConfig) => Promise<void>;
+  marketPageConfig: MarketPageConfig | null;
+  updateMarketPageConfig: (config: MarketPageConfig) => Promise<void>;
   isLoading: boolean;
 }
 
@@ -87,27 +96,39 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [impactProjects, setImpactProjects] = useState<ImpactProject[]>([]);
   const [paymentConfig, setPaymentConfig] = useState<PaymentConfig | null>(null);
   const [impactPageConfig, setImpactPageConfig] = useState<ImpactPageConfig | null>(null);
+  const [marketPageConfig, setMarketPageConfig] = useState<MarketPageConfig | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [prodRes, catRes, ordRes, usrRes, impactRes, paymentRes, pageConfigRes] = await Promise.all([
+        const [prodRes, catRes, ordRes, usrRes, impactRes, paymentRes, pageConfigRes, marketConfigRes] = await Promise.all([
           fetch('/api/products'),
           fetch('/api/categories'),
           fetch('/api/orders'),
           fetch('/api/users'),
           fetch('/api/impact/projects'),
           fetch('/api/payment/config'),
-          fetch('/api/impact/page_config')
+          fetch('/api/impact/page_config'),
+          fetch('/api/market/page_config')
         ]);
-        if (prodRes.ok) setProducts(await prodRes.json());
+        if (prodRes.ok) {
+          const productData = await prodRes.json();
+          setProducts(productData.map((product: Product) => ({
+            ...product,
+            description: product.description || '',
+            details: product.details || '',
+            variations: Array.isArray(product.variations) ? product.variations : [],
+            portions: Array.isArray(product.portions) ? product.portions : []
+          })));
+        }
         if (catRes.ok) setCategories(await catRes.json());
         if (ordRes.ok) setOrders(await ordRes.json());
         if (usrRes.ok) setUsers(await usrRes.json());
         if (impactRes.ok) setImpactProjects(await impactRes.json());
         if (paymentRes.ok) setPaymentConfig(await paymentRes.json());
         if (pageConfigRes.ok) setImpactPageConfig(await pageConfigRes.json());
+        if (marketConfigRes.ok) setMarketPageConfig(await marketConfigRes.json());
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
@@ -249,6 +270,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updateMarketPageConfig = async (config: MarketPageConfig) => {
+    const res = await fetch('/api/market/page_config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config)
+    });
+    if (res.ok) {
+      setMarketPageConfig(await res.json());
+    }
+  };
+
   return (
     <DataContext.Provider value={{ 
       products, 
@@ -258,6 +290,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       impactProjects,
       paymentConfig,
       impactPageConfig,
+      marketPageConfig,
       addProduct, 
       updateProduct, 
       deleteProduct, 
@@ -270,6 +303,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       deleteImpactProject,
       updatePaymentConfig,
       updateImpactPageConfig,
+      updateMarketPageConfig,
       isLoading 
     }}>
       {children}

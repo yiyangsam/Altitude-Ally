@@ -25,13 +25,15 @@ import { useAuth } from '../lib/AuthContext';
 import { QrCode } from 'lucide-react';
 
 export default function OperatorDashboard() {
-  const { products, orders, users, categories, impactProjects, paymentConfig, impactPageConfig, addProduct, updateProduct, deleteProduct, updateOrder, addCategory, deleteCategory, addImpactProject, updateImpactProject, deleteImpactProject, updatePaymentConfig, updateImpactPageConfig } = useData();
+  const { products, orders, users, categories, impactProjects, paymentConfig, impactPageConfig, marketPageConfig, addProduct, updateProduct, deleteProduct, updateOrder, addCategory, deleteCategory, addImpactProject, updateImpactProject, deleteImpactProject, updatePaymentConfig, updateImpactPageConfig, updateMarketPageConfig } = useData();
   const { adminUser, adminPass, updateAdminCredentials } = useAuth();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
   const [isCategoriesModalOpen, setIsCategoriesModalOpen] = useState(false);
   const [isImpactModalOpen, setIsImpactModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [isPageConfigModalOpen, setIsPageConfigModalOpen] = useState(false);
+  const [activeConfigTab, setActiveConfigTab] = useState<'main' | 'impact'>('main');
   const [isViewAllOrdersOpen, setIsViewAllOrdersOpen] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [selectedUserEmail, setSelectedUserEmail] = useState<string | null>(null);
@@ -42,7 +44,9 @@ export default function OperatorDashboard() {
     bank_info: ''
   });
 
-  const [isImpactPageSetupModalOpen, setIsImpactPageSetupModalOpen] = useState(false);
+  const [marketPageForm, setMarketPageForm] = useState({
+    hero_image_url: ''
+  });
   const [impactPageForm, setImpactPageForm] = useState({
     hero_title: '',
     hero_description: '',
@@ -79,7 +83,15 @@ export default function OperatorDashboard() {
   }, [impactPageConfig]);
 
   useEffect(() => {
-    const isAnyModalOpen = isAddModalOpen || isInventoryModalOpen || isCategoriesModalOpen || isImpactModalOpen || isPaymentModalOpen || isViewAllOrdersOpen || isImpactPageSetupModalOpen || !!selectedOrderId || !!selectedUserEmail;
+    if (marketPageConfig) {
+      setMarketPageForm({
+        hero_image_url: marketPageConfig.hero_image_url || ''
+      });
+    }
+  }, [marketPageConfig]);
+
+  useEffect(() => {
+    const isAnyModalOpen = isAddModalOpen || isInventoryModalOpen || isCategoriesModalOpen || isImpactModalOpen || isPaymentModalOpen || isViewAllOrdersOpen || isPageConfigModalOpen || !!selectedOrderId || !!selectedUserEmail;
     if (isAnyModalOpen) {
       document.body.style.overflow = 'hidden';
     } else {
@@ -88,15 +100,18 @@ export default function OperatorDashboard() {
     return () => {
       document.body.style.overflow = 'unset';
     };
-  }, [isAddModalOpen, isInventoryModalOpen, isCategoriesModalOpen, isImpactModalOpen, isPaymentModalOpen, isViewAllOrdersOpen, isImpactPageSetupModalOpen, selectedOrderId, selectedUserEmail]);
+  }, [isAddModalOpen, isInventoryModalOpen, isCategoriesModalOpen, isImpactModalOpen, isPaymentModalOpen, isViewAllOrdersOpen, isPageConfigModalOpen, selectedOrderId, selectedUserEmail]);
 
   const [newProduct, setNewProduct] = useState({
     name: '',
     price: '',
     unit: 'kg',
     description: '',
+    details: '',
     category: categories[0]?.name || 'Uncategorized',
-    image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=1000'
+    image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=1000',
+    variations: '',
+    portions: ''
   });
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -106,7 +121,10 @@ export default function OperatorDashboard() {
     unit: 'kg',
     category: categories[0]?.name || 'Uncategorized',
     description: '',
-    image: ''
+    details: '',
+    image: '',
+    variations: '',
+    portions: ''
   });
 
   const [newImpactProject, setNewImpactProject] = useState({
@@ -136,11 +154,18 @@ export default function OperatorDashboard() {
   const [showAdminStatus, setShowAdminStatus] = useState(false);
   const [adminError, setAdminError] = useState('');
 
+  const parseOptionList = (value: string) => value
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     addProduct({
       ...newProduct,
-      price: parseFloat(newProduct.price) || 0
+      price: parseFloat(newProduct.price) || 0,
+      variations: parseOptionList(newProduct.variations),
+      portions: parseOptionList(newProduct.portions)
     });
     setIsAddModalOpen(false);
     setNewProduct({
@@ -148,8 +173,11 @@ export default function OperatorDashboard() {
       price: '',
       unit: 'kg',
       description: '',
+      details: '',
       category: categories[0]?.name || 'Uncategorized',
-      image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=1000'
+      image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=1000',
+      variations: '',
+      portions: ''
     });
   };
 
@@ -162,7 +190,10 @@ export default function OperatorDashboard() {
         unit: editForm.unit,
         category: editForm.category,
         description: editForm.description,
-        image: editForm.image
+        details: editForm.details,
+        image: editForm.image,
+        variations: parseOptionList(editForm.variations),
+        portions: parseOptionList(editForm.portions)
       });
       setEditingId(null);
     }
@@ -209,7 +240,13 @@ export default function OperatorDashboard() {
   const handleImpactPageSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     updateImpactPageConfig(impactPageForm);
-    setIsImpactPageSetupModalOpen(false);
+    setIsPageConfigModalOpen(false);
+  };
+
+  const handleMarketPageSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateMarketPageConfig(marketPageForm);
+    setIsPageConfigModalOpen(false);
   };
 
   const selectedOrder = orders.find(o => o.id === selectedOrderId);
@@ -271,7 +308,7 @@ export default function OperatorDashboard() {
             <span className="font-bold text-left text-base md:text-lg leading-tight font-serif uppercase tracking-tight">Payment<br/>Setup</span>
           </button>
           <button 
-            onClick={() => setIsImpactPageSetupModalOpen(true)}
+            onClick={() => setIsPageConfigModalOpen(true)}
             className="flex flex-col items-start justify-between p-6 md:p-8 bg-surface-container-high text-on-surface rounded-[2rem] aspect-square shadow-sm hover:scale-95 transition-all group"
           >
             <Edit2 className="text-primary" size={40} />
@@ -548,6 +585,39 @@ export default function OperatorDashboard() {
                 </div>
 
                 <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-outline ml-2">Detailed Description</label>
+                  <textarea 
+                    className="block w-full px-6 py-4 bg-surface-container-low border-none rounded-2xl text-lg font-serif min-h-[120px]" 
+                    placeholder="Add care notes, origin, taste, delivery details, or anything shoppers should know..."
+                    value={newProduct.details}
+                    onChange={e => setNewProduct({...newProduct, details: e.target.value})}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-outline ml-2">Variations</label>
+                    <input 
+                      className="block w-full px-6 py-4 bg-surface-container-low border-none rounded-2xl text-lg font-serif" 
+                      placeholder="Red, Green, Mixed"
+                      value={newProduct.variations}
+                      onChange={e => setNewProduct({...newProduct, variations: e.target.value})}
+                    />
+                    <p className="text-[10px] text-on-surface-variant ml-2">Separate choices with commas.</p>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-outline ml-2">Portions</label>
+                    <input 
+                      className="block w-full px-6 py-4 bg-surface-container-low border-none rounded-2xl text-lg font-serif" 
+                      placeholder="250g, 500g, 1kg"
+                      value={newProduct.portions}
+                      onChange={e => setNewProduct({...newProduct, portions: e.target.value})}
+                    />
+                    <p className="text-[10px] text-on-surface-variant ml-2">Separate choices with commas.</p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-outline ml-2">Image URL</label>
                   <div className="relative">
                     <ImageIcon className="absolute left-6 top-1/2 -translate-y-1/2 text-outline/40" size={20} />
@@ -626,6 +696,22 @@ export default function OperatorDashboard() {
                         </div>
 
                         <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-outline ml-2">Detailed Description</label>
+                          <textarea className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif min-h-[100px]" value={editForm.details} onChange={e => setEditForm({...editForm, details: e.target.value})} placeholder="Detailed description for the expanded product page" />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-outline ml-2">Variations</label>
+                            <input className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={editForm.variations} onChange={e => setEditForm({...editForm, variations: e.target.value})} placeholder="Red, Green, Mixed" />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-outline ml-2">Portions</label>
+                            <input className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={editForm.portions} onChange={e => setEditForm({...editForm, portions: e.target.value})} placeholder="250g, 500g, 1kg" />
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
                           <label className="text-[10px] font-black uppercase tracking-widest text-outline ml-2">Image URL</label>
                           <input className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={editForm.image} onChange={e => setEditForm({...editForm, image: e.target.value})} placeholder="Image URL" />
                         </div>
@@ -642,6 +728,16 @@ export default function OperatorDashboard() {
                           <h4 className="font-bold text-xl mb-1">{p.name}</h4>
                           <p className="text-sm text-on-surface-variant italic mb-2">฿{p.price.toLocaleString()} / {p.unit}</p>
                           <p className="text-xs text-on-surface-variant line-clamp-2">{p.description}</p>
+                          {((p.variations?.length || 0) > 0 || (p.portions?.length || 0) > 0) && (
+                            <div className="flex flex-wrap gap-1.5 mt-3">
+                              {p.variations?.map(option => (
+                                <span key={option} className="px-2 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-bold">{option}</span>
+                              ))}
+                              {p.portions?.map(option => (
+                                <span key={option} className="px-2 py-1 rounded-full bg-secondary/10 text-secondary text-[10px] font-bold">{option}</span>
+                              ))}
+                            </div>
+                          )}
                         </div>
                         <div className="flex flex-col gap-2">
                           {confirmDeleteId === p.id ? (
@@ -659,7 +755,10 @@ export default function OperatorDashboard() {
                                   unit: p.unit,
                                   category: p.category,
                                   description: p.description, 
-                                  image: p.image 
+                                  details: p.details || '',
+                                  image: p.image,
+                                  variations: p.variations?.join(', ') || '',
+                                  portions: p.portions?.join(', ') || ''
                                 }); 
                               }} className="p-4 bg-primary/10 text-primary rounded-2xl hover:bg-primary/20 transition-all">
                                 <Edit2 size={24} />
@@ -1025,54 +1124,83 @@ export default function OperatorDashboard() {
         )}
       </AnimatePresence>
 
-      {/* Impact Page Config Modal */}
+      {/* Page Config Modal */}
       <AnimatePresence>
-        {isImpactPageSetupModalOpen && (
+        {isPageConfigModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsImpactPageSetupModalOpen(false)} className="absolute inset-0 bg-on-surface/40 backdrop-blur-sm" />
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsPageConfigModalOpen(false)} className="absolute inset-0 bg-on-surface/40 backdrop-blur-sm" />
             <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }} className="relative w-full max-w-2xl bg-surface rounded-[3rem] shadow-2xl overflow-hidden border border-outline-variant/20">
               <div className="p-8 border-b border-outline-variant/10 flex justify-between items-center text-primary">
                 <div className="flex items-center gap-3">
                   <Edit2 size={24} />
-                  <h2 className="text-2xl font-serif font-black italic">Impact Page Config</h2>
+                  <h2 className="text-2xl font-serif font-black italic">Page Configuration</h2>
                 </div>
-                <button onClick={() => setIsImpactPageSetupModalOpen(false)} className="p-2 hover:bg-surface-container-high rounded-full transition-colors"><X /></button>
+                <button onClick={() => setIsPageConfigModalOpen(false)} className="p-2 hover:bg-surface-container-high rounded-full transition-colors"><X /></button>
               </div>
-              <div className="p-8 space-y-6 max-h-[70vh] overflow-y-auto no-scrollbar">
-                <form onSubmit={handleImpactPageSubmit} className="space-y-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-outline ml-2">Hero Title</label>
-                    <input required className="w-full px-4 py-4 bg-surface-container-low border-none rounded-2xl text-sm font-serif" value={impactPageForm.hero_title} onChange={e => setImpactPageForm({...impactPageForm, hero_title: e.target.value})} placeholder="$5,000 Raised..." />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-outline ml-2">Hero Description</label>
-                    <textarea required className="w-full px-4 py-4 bg-surface-container-low border-none rounded-2xl text-sm font-serif min-h-[100px]" value={impactPageForm.hero_description} onChange={e => setImpactPageForm({...impactPageForm, hero_description: e.target.value})} placeholder="Together, we've cultivated..." />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-outline ml-2">Families Served Metric</label>
-                    <input required className="w-full px-4 py-4 bg-surface-container-low border-none rounded-2xl text-sm font-serif" value={impactPageForm.families_served} onChange={e => setImpactPageForm({...impactPageForm, families_served: e.target.value})} placeholder="800+" />
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-outline ml-2">Transparency Stats</label>
-                    {impactPageForm.transparency_stats.map((stat, i) => (
-                      <div key={i} className="flex gap-4 items-center">
-                        <input required className="flex-1 px-4 py-3 bg-surface-container-low border-none rounded-2xl text-sm font-serif" value={stat.label} onChange={e => {
-                          const newStats = [...impactPageForm.transparency_stats];
-                          newStats[i].label = e.target.value;
-                          setImpactPageForm({...impactPageForm, transparency_stats: newStats});
-                        }} placeholder="Label (e.g. Garden Infrastructure)" />
-                        <input required type="number" className="w-24 px-4 py-3 bg-surface-container-low border-none rounded-2xl text-sm font-serif" value={stat.value} onChange={e => {
-                          const newStats = [...impactPageForm.transparency_stats];
-                          newStats[i].value = Number(e.target.value) || 0;
-                          setImpactPageForm({...impactPageForm, transparency_stats: newStats});
-                        }} placeholder="%" />
-                      </div>
-                    ))}
-                  </div>
+              <div className="flex px-8 pt-4 gap-4 border-b border-outline-variant/10">
+                <button 
+                  onClick={() => setActiveConfigTab('main')}
+                  className={`pb-4 font-bold text-sm uppercase tracking-widest transition-colors ${activeConfigTab === 'main' ? 'text-primary border-b-2 border-primary' : 'text-on-surface-variant hover:text-primary'}`}
+                >
+                  Main Page
+                </button>
+                <button 
+                  onClick={() => setActiveConfigTab('impact')}
+                  className={`pb-4 font-bold text-sm uppercase tracking-widest transition-colors ${activeConfigTab === 'impact' ? 'text-primary border-b-2 border-primary' : 'text-on-surface-variant hover:text-primary'}`}
+                >
+                  Impact Page
+                </button>
+              </div>
+              <div className="p-8 space-y-6 max-h-[60vh] overflow-y-auto no-scrollbar">
+                {activeConfigTab === 'main' && (
+                  <form onSubmit={handleMarketPageSubmit} className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-outline ml-2">Hero Image URL (Main Picture)</label>
+                      <input required className="w-full px-4 py-4 bg-surface-container-low border-none rounded-2xl text-sm font-serif" value={marketPageForm.hero_image_url} onChange={e => setMarketPageForm({...marketPageForm, hero_image_url: e.target.value})} placeholder="https://..." />
+                    </div>
+                    {marketPageForm.hero_image_url && (
+                      <img src={marketPageForm.hero_image_url} alt="Preview" className="w-full h-48 object-cover rounded-2xl mt-4 bg-surface-container-low" />
+                    )}
+                    <button type="submit" className="w-full bg-primary text-on-primary py-4 rounded-2xl font-bold shadow-lg hover:scale-[0.98] transition-all text-lg">Save Configuration</button>
+                  </form>
+                )}
 
-                  <button type="submit" className="w-full bg-primary text-on-primary py-4 rounded-2xl font-bold shadow-lg hover:scale-[0.98] transition-all text-lg">Save Configuration</button>
-                </form>
+                {activeConfigTab === 'impact' && (
+                  <form onSubmit={handleImpactPageSubmit} className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-outline ml-2">Hero Title</label>
+                      <input required className="w-full px-4 py-4 bg-surface-container-low border-none rounded-2xl text-sm font-serif" value={impactPageForm.hero_title} onChange={e => setImpactPageForm({...impactPageForm, hero_title: e.target.value})} placeholder="$5,000 Raised..." />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-outline ml-2">Hero Description</label>
+                      <textarea required className="w-full px-4 py-4 bg-surface-container-low border-none rounded-2xl text-sm font-serif min-h-[100px]" value={impactPageForm.hero_description} onChange={e => setImpactPageForm({...impactPageForm, hero_description: e.target.value})} placeholder="Together, we've cultivated..." />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-outline ml-2">Families Served Metric</label>
+                      <input required className="w-full px-4 py-4 bg-surface-container-low border-none rounded-2xl text-sm font-serif" value={impactPageForm.families_served} onChange={e => setImpactPageForm({...impactPageForm, families_served: e.target.value})} placeholder="800+" />
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-outline ml-2">Transparency Stats</label>
+                      {impactPageForm.transparency_stats.map((stat, i) => (
+                        <div key={i} className="flex gap-4 items-center">
+                          <input required className="flex-1 px-4 py-3 bg-surface-container-low border-none rounded-2xl text-sm font-serif" value={stat.label} onChange={e => {
+                            const newStats = [...impactPageForm.transparency_stats];
+                            newStats[i].label = e.target.value;
+                            setImpactPageForm({...impactPageForm, transparency_stats: newStats});
+                          }} placeholder="Label (e.g. Garden Infrastructure)" />
+                          <input required type="number" className="w-24 px-4 py-3 bg-surface-container-low border-none rounded-2xl text-sm font-serif" value={stat.value} onChange={e => {
+                            const newStats = [...impactPageForm.transparency_stats];
+                            newStats[i].value = Number(e.target.value) || 0;
+                            setImpactPageForm({...impactPageForm, transparency_stats: newStats});
+                          }} placeholder="%" />
+                        </div>
+                      ))}
+                    </div>
+
+                    <button type="submit" className="w-full bg-primary text-on-primary py-4 rounded-2xl font-bold shadow-lg hover:scale-[0.98] transition-all text-lg">Save Configuration</button>
+                  </form>
+                )}
               </div>
             </motion.div>
           </div>

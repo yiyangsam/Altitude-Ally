@@ -241,6 +241,28 @@ app.put('/api/impact/page_config', async (req, res) => {
   res.json(data[0]);
 });
 
+// --- Market Page Config Routes ---
+app.get('/api/market/page_config', async (req, res) => {
+  const { data, error } = await supabase.from('market_page_config').select('*').eq('id', 1).single();
+  if (error || !data) {
+    return res.json({
+      id: 1,
+      hero_image_url: 'https://images.unsplash.com/photo-1610348725531-843dff563e2c?auto=format&fit=crop&q=80&w=2000'
+    });
+  }
+  res.json(data);
+});
+
+app.put('/api/market/page_config', async (req, res) => {
+  const payload = { id: 1, ...req.body };
+  const { data, error } = await supabase.from('market_page_config').upsert(payload).select();
+  if (error) {
+    console.warn('Could not save to Supabase (table might be missing), returning payload:', error.message);
+    return res.json(payload);
+  }
+  res.json(data[0]);
+});
+
 if (process.env.NODE_ENV !== 'production') {
   app.listen(port, () => {
     console.log(`Backend server listening at http://localhost:${port}`);

@@ -154,6 +154,16 @@ export default function CheckoutPage() {
                         <div className="flex-grow text-center md:text-left">
                           <h3 className="text-base md:text-2xl font-bold font-serif mb-0.5">{item.name}</h3>
                           <p className="text-on-surface-variant text-[10px] md:text-sm mb-3 md:mb-4 italic">Per {item.unit}</p>
+                          {(item.selectedVariation || item.selectedPortion) && (
+                            <div className="flex flex-wrap justify-center md:justify-start gap-1.5 mb-3">
+                              {item.selectedVariation && (
+                                <span className="px-2 py-1 rounded-full bg-primary/10 text-primary text-[9px] md:text-xs font-bold">{item.selectedVariation}</span>
+                              )}
+                              {item.selectedPortion && (
+                                <span className="px-2 py-1 rounded-full bg-secondary/10 text-secondary text-[9px] md:text-xs font-bold">{item.selectedPortion}</span>
+                              )}
+                            </div>
+                          )}
                           <button 
                             onClick={() => removeFromCart(item.id)}
                             className="text-error font-bold text-[10px] md:text-sm flex items-center gap-1.5 mx-auto md:mx-0 hover:underline"
