@@ -27,10 +27,13 @@ app.use(cors());
 app.use(express.json());
 
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_ANON_KEY;
+const supabaseKey =
+  process.env.SUPABASE_PUBLISHABLE_KEY ||
+  process.env.SUPABASE_ANON_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
-  console.warn('Supabase credentials not found in env. Ensure SUPABASE_URL and SUPABASE_ANON_KEY are set.');
+  console.warn('Supabase credentials not found in the environment.');
 }
 
 const supabase = createClient(supabaseUrl || 'https://placeholder.supabase.co', supabaseKey || 'placeholder');
