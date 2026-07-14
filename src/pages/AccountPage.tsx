@@ -24,7 +24,7 @@ function splitPhoneNumber(phone: string) {
 function formatAccountDate(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString(undefined, {
+  return date.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric'
@@ -201,7 +201,7 @@ export default function AccountPage() {
                           const digits = e.target.value.replace(/\D/g, '').slice(0, 4);
                           setEditForm({ ...editForm, countryCode: `+${digits}` });
                         }}
-                        className="w-20 md:w-24 flex-shrink-0 text-on-surface bg-surface-container-low font-semibold text-sm md:text-lg font-serif border-2 border-transparent focus:border-primary focus:outline-none rounded-lg px-3 py-3 md:py-4"
+                        className="w-20 flex-shrink-0 text-on-surface bg-surface-container-low font-semibold text-sm md:text-lg font-serif border-2 border-transparent focus:border-primary focus:outline-none rounded-lg px-3 py-3 md:py-4"
                         placeholder="+66"
                         aria-label="Country code"
                       />
@@ -210,7 +210,7 @@ export default function AccountPage() {
                         value={editForm.phoneNumber}
                         onChange={e => setEditForm({...editForm, phoneNumber: e.target.value})}
                         className="min-w-0 flex-1 text-on-surface bg-surface-container-low font-semibold text-sm md:text-lg font-serif border-2 border-transparent focus:border-primary focus:outline-none rounded-lg px-3 py-3 md:py-4"
-                        placeholder="Enter phone number"
+                        placeholder="Phone number"
                         aria-label="Phone number"
                       />
                     </div>
