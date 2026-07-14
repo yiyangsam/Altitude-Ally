@@ -1,11 +1,11 @@
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
-import { User, Lock, ArrowLeft, ArrowRight, Eye, EyeOff, UserPlus, AlertCircle, MailCheck } from 'lucide-react';
+import { User, Lock, ArrowLeft, ArrowRight, Eye, EyeOff, UserPlus, AlertCircle, MailCheck, RefreshCw } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 export default function CustomerLoginPage() {
-  const { isLoggedIn, login, register } = useAuth();
+  const { isLoggedIn, login, register, resendSignupConfirmation } = useAuth();
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -18,6 +18,8 @@ export default function CustomerLoginPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [registrationSent, setRegistrationSent] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const [resendMessage, setResendMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
     if (isLoggedIn) navigate('/account', { replace: true });
@@ -66,6 +68,30 @@ export default function CustomerLoginPage() {
     setLoading(false);
   };
 
+  const handleResendConfirmation = async () => {
+    setIsResending(true);
+    setResendMessage(null);
+
+    const response = await resendSignupConfirmation(email);
+
+    if (response?.error) {
+      const message = response.error.message?.toLowerCase() || '';
+      setResendMessage({
+        type: 'error',
+        text: message.includes('rate limit') || message.includes('seconds')
+          ? 'Please wait a minute before requesting another email.'
+          : 'We could not resend the email. Please try again shortly.'
+      });
+    } else {
+      setResendMessage({
+        type: 'success',
+        text: 'A new verification email has been sent.'
+      });
+    }
+
+    setIsResending(false);
+  };
+
   return (
     <div className="min-h-screen bg-surface flex flex-col md:flex-row">
       {/* Brand Panel */}
@@ -112,6 +138,26 @@ export default function CustomerLoginPage() {
               <p className="text-on-surface-variant mb-8 text-sm md:text-base leading-relaxed">
                 We sent an approval link to <strong className="text-on-surface">{email}</strong>. Open it to verify your details and activate your account.
               </p>
+              <p className="text-on-surface-variant mb-4 text-sm leading-relaxed">
+                If this address was used before or the first link expired, request a new link below.
+              </p>
+              {resendMessage && (
+                <p
+                  className={`mb-4 text-sm font-semibold ${resendMessage.type === 'success' ? 'text-emerald-700' : 'text-error'}`}
+                  role="status"
+                >
+                  {resendMessage.text}
+                </p>
+              )}
+              <button
+                type="button"
+                onClick={handleResendConfirmation}
+                disabled={isResending}
+                className="w-full mb-3 py-3.5 md:py-4 rounded-xl border-2 border-primary text-primary font-bold text-base transition-colors hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                <RefreshCw size={18} className={isResending ? 'animate-spin' : ''} />
+                {isResending ? 'Sending...' : 'Resend verification email'}
+              </button>
               <button
                 type="button"
                 onClick={() => {
@@ -120,6 +166,7 @@ export default function CustomerLoginPage() {
                   setPassword('');
                   setConfirmPassword('');
                   setShowConfirmPassword(false);
+                  setResendMessage(null);
                 }}
                 className="w-full py-3.5 md:py-4 rounded-xl bg-primary text-on-primary font-bold text-base shadow-lg"
               >
@@ -280,6 +327,7 @@ export default function CustomerLoginPage() {
                 setErrorMsg(null);
                 setConfirmPassword('');
                 setShowConfirmPassword(false);
+                setResendMessage(null);
               }}
               className="text-primary font-bold not-italic hover:underline ml-1"
             >

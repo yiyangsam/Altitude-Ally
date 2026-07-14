@@ -26,6 +26,7 @@ interface AuthContextType {
   adminPass: string;
   login: (email: string, pass: string) => Promise<any>;
   register: (name: string, email: string, pass: string) => Promise<any>;
+  resendSignupConfirmation: (email: string) => Promise<any>;
   requestPasswordReset: (email: string) => Promise<any>;
   updatePassword: (password: string) => Promise<any>;
   logout: () => Promise<void>;
@@ -153,6 +154,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { data: authData };
   };
 
+  const resendSignupConfirmation = async (email: string) => {
+    const { data, error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/login`
+      }
+    });
+
+    if (error) return { error };
+    return { data };
+  };
+
   const requestPasswordReset = async (email: string) => {
     const redirectTo = `${window.location.origin}/update-password`;
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
@@ -221,6 +235,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       adminPass, 
       login, 
       register,
+      resendSignupConfirmation,
       requestPasswordReset,
       updatePassword,
       logout, 
