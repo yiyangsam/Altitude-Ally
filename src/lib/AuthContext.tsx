@@ -25,6 +25,8 @@ interface AuthContextType {
   adminPass: string;
   login: (email: string, pass: string) => Promise<any>;
   register: (name: string, email: string, pass: string) => Promise<any>;
+  requestPasswordReset: (email: string) => Promise<any>;
+  updatePassword: (password: string) => Promise<any>;
   logout: () => Promise<void>;
   updateProfile: (data: Partial<User>) => Promise<boolean>;
   addOrder: (order: Omit<Order, 'id' | 'date' | 'status'>) => void;
@@ -147,6 +149,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { data: authData };
   };
 
+  const requestPasswordReset = async (email: string) => {
+    const redirectTo = `${window.location.origin}/update-password`;
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+    if (error) return { error };
+    return { data };
+  };
+
+  const updatePassword = async (password: string) => {
+    const { data, error } = await supabase.auth.updateUser({ password });
+    if (error) return { error };
+    return { data };
+  };
+
   const logout = async () => {
     await supabase.auth.signOut();
     setIsLoggedIn(false);
@@ -202,6 +217,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       adminPass, 
       login, 
       register,
+      requestPasswordReset,
+      updatePassword,
       logout, 
       updateProfile, 
       addOrder,

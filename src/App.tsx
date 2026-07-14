@@ -13,6 +13,7 @@ import CheckoutPage from './pages/CheckoutPage';
 import OperatorDashboard from './pages/OperatorDashboard';
 import OperatorLoginPage from './pages/OperatorLoginPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import UpdatePasswordPage from './pages/UpdatePasswordPage';
 import { AuthProvider, useAuth } from './lib/AuthContext';
 import { CartProvider } from './lib/CartContext';
 import { DataProvider } from './lib/DataContext';
@@ -40,6 +41,7 @@ export default function App() {
           <Route element={<OperatorLoginPage />} path="/operator/login" />
           <Route element={<OperatorDashboard />} path="/operator/dashboard" />
           <Route element={<ResetPasswordPage />} path="/reset-password" />
+          <Route element={<UpdatePasswordPage />} path="/update-password" />
           
           {/* Fallback */}
           <Route element={<Layout><MarketPage /></Layout>} path="*" />
@@ -50,4 +52,3 @@ export default function App() {
     </AuthProvider>
   );
 }
-

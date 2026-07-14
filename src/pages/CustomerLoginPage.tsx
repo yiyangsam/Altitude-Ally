@@ -58,10 +58,7 @@ export default function CustomerLoginPage() {
             <img src="/logo.png" className="w-40 h-40" alt="Altitude Ally Logo" />
             <span className="text-3xl font-bold tracking-tighter">Altitude Ally</span>
           </div>
-          <h1 className="text-6xl font-bold font-serif italic mb-6 leading-tight">Welcome back, neighbor.</h1>
-          <p className="text-xl opacity-80 leading-relaxed font-light max-w-lg">
-            Join the collective effort to sustain our mountain communities. Log in to manage your harvests and view your local impact.
-          </p>
+          <h1 className="text-6xl font-bold font-serif italic leading-tight">Welcome back.</h1>
         </div>
         {/* Decorative elements */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
@@ -84,7 +81,7 @@ export default function CustomerLoginPage() {
             {isSignUp ? "Create Account" : "Sign In"}
           </h3>
           <p className="text-on-surface-variant mb-6 text-xs md:text-base">
-            {isSignUp ? "Join our organic collective." : "Access your community harvest account."}
+            {isSignUp ? "Join our organic collective." : "Log in to your Altitude Ally account."}
           </p>
 
           <AnimatePresence>
@@ -145,7 +142,13 @@ export default function CustomerLoginPage() {
               <div className="flex justify-between items-center ml-1">
                 <label className="text-[10px] md:text-sm font-bold text-secondary uppercase tracking-widest">Password</label>
                 {!isSignUp && (
-                  <button type="button" className="text-[10px] md:text-xs text-primary font-bold hover:underline">Forgot?</button>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/reset-password')}
+                    className="text-[10px] md:text-xs text-primary font-bold hover:underline"
+                  >
+                    Forgot password?
+                  </button>
                 )}
               </div>
               <div className="relative group">
@@ -161,6 +164,7 @@ export default function CustomerLoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors p-1"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4 md:w-5 md:h-5" /> : <Eye className="w-4 h-4 md:w-5 md:h-5" />}
@@ -188,7 +192,7 @@ export default function CustomerLoginPage() {
               }}
               className="text-primary font-bold not-italic hover:underline ml-1"
             >
-              {isSignUp ? "Sign In" : "Join Collective"}
+              {isSignUp ? "Sign In" : "Sign Up"}
             </button>
           </p>
         </motion.div>
