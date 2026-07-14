@@ -1,13 +1,14 @@
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
-import { User, Lock, ArrowRight, Eye, EyeOff, UserPlus, AlertCircle, MailCheck } from 'lucide-react';
+import { User, Lock, ArrowLeft, ArrowRight, Eye, EyeOff, UserPlus, AlertCircle, MailCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 export default function CustomerLoginPage() {
   const { isLoggedIn, login, register } = useAuth();
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
 
   const [email, setEmail] = useState('');
@@ -93,6 +94,17 @@ export default function CustomerLoginPage() {
             <h2 className="text-xl font-bold font-serif italic text-primary">Altitude Ally</h2>
           </div>
 
+          {(isSignUp || registrationSent) && (
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              className="inline-flex items-center gap-2 text-sm text-primary font-bold hover:underline underline-offset-4 mb-6"
+            >
+              <ArrowLeft size={18} />
+              Back to home
+            </button>
+          )}
+
           {registrationSent ? (
             <div className="py-4" aria-live="polite">
               <MailCheck className="text-primary mb-5" size={42} />
@@ -107,6 +119,7 @@ export default function CustomerLoginPage() {
                   setIsSignUp(false);
                   setPassword('');
                   setConfirmPassword('');
+                  setShowConfirmPassword(false);
                 }}
                 className="w-full py-3.5 md:py-4 rounded-xl bg-primary text-on-primary font-bold text-base shadow-lg"
               >
@@ -230,11 +243,19 @@ export default function CustomerLoginPage() {
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       className="w-full pl-11 pr-11 py-3 md:py-4 rounded-xl md:rounded-2xl bg-surface-container-low border-2 border-transparent focus:border-primary focus:bg-white transition-all outline-none text-sm md:text-base"
                       placeholder="Confirm your password"
-                      type={showPassword ? 'text' : 'password'}
+                      type={showConfirmPassword ? 'text' : 'password'}
                       autoComplete="new-password"
                       minLength={8}
                       required
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword((visible) => !visible)}
+                      aria-label={showConfirmPassword ? 'Hide confirmation password' : 'Show confirmation password'}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors p-1"
+                    >
+                      {showConfirmPassword ? <EyeOff className="w-4 h-4 md:w-5 md:h-5" /> : <Eye className="w-4 h-4 md:w-5 md:h-5" />}
+                    </button>
                   </div>
                 </motion.div>
               )}
@@ -258,6 +279,7 @@ export default function CustomerLoginPage() {
                 setIsSignUp(!isSignUp);
                 setErrorMsg(null);
                 setConfirmPassword('');
+                setShowConfirmPassword(false);
               }}
               className="text-primary font-bold not-italic hover:underline ml-1"
             >
