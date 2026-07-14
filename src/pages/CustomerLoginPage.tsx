@@ -1,20 +1,26 @@
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
-import { User, Lock, ArrowRight, ShieldCheck, Eye, EyeOff, UserPlus, AlertCircle } from 'lucide-react';
-import { useState } from 'react';
+import { User, Lock, ArrowRight, Eye, EyeOff, UserPlus, AlertCircle, MailCheck } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 export default function CustomerLoginPage() {
-  const { login, register } = useAuth();
+  const { isLoggedIn, login, register } = useAuth();
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [registrationSent, setRegistrationSent] = useState(false);
+
+  useEffect(() => {
+    if (isLoggedIn) navigate('/account', { replace: true });
+  }, [isLoggedIn, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,13 +33,23 @@ export default function CustomerLoginPage() {
         setLoading(false);
         return;
       }
+      if (password.length < 8) {
+        setErrorMsg("Your password must be at least 8 characters.");
+        setLoading(false);
+        return;
+      }
+      if (password !== confirmPassword) {
+        setErrorMsg("The passwords do not match.");
+        setLoading(false);
+        return;
+      }
       const response = await register(name, email, password);
       // @ts-ignore
       if (response?.error) {
         // @ts-ignore
         setErrorMsg(response.error.message);
       } else {
-        navigate('/account');
+        setRegistrationSent(true);
       }
     } else {
       const response = await login(email, password);
@@ -77,12 +93,34 @@ export default function CustomerLoginPage() {
             <h2 className="text-xl font-bold font-serif italic text-primary">Altitude Ally</h2>
           </div>
 
-          <h3 className="text-2xl md:text-4xl font-bold text-on-surface mb-1 font-serif">
-            {isSignUp ? "Create Account" : "Sign In"}
-          </h3>
-          <p className="text-on-surface-variant mb-6 text-xs md:text-base">
-            {isSignUp ? "Join our organic collective." : "Log in to your Altitude Ally account."}
-          </p>
+          {registrationSent ? (
+            <div className="py-4" aria-live="polite">
+              <MailCheck className="text-primary mb-5" size={42} />
+              <h3 className="text-2xl md:text-4xl font-bold text-on-surface mb-3 font-serif">Check your email</h3>
+              <p className="text-on-surface-variant mb-8 text-sm md:text-base leading-relaxed">
+                We sent an approval link to <strong className="text-on-surface">{email}</strong>. Open it to verify your details and activate your account.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setRegistrationSent(false);
+                  setIsSignUp(false);
+                  setPassword('');
+                  setConfirmPassword('');
+                }}
+                className="w-full py-3.5 md:py-4 rounded-xl bg-primary text-on-primary font-bold text-base shadow-lg"
+              >
+                Back to sign in
+              </button>
+            </div>
+          ) : (
+            <>
+              <h3 className="text-2xl md:text-4xl font-bold text-on-surface mb-1 font-serif">
+                {isSignUp ? "Create Account" : "Sign In"}
+              </h3>
+              <p className="text-on-surface-variant mb-6 text-xs md:text-base">
+                {isSignUp ? "Join us." : "Log in to your Altitude Ally account."}
+              </p>
 
           <AnimatePresence>
             {errorMsg && (
@@ -98,7 +136,7 @@ export default function CustomerLoginPage() {
             )}
           </AnimatePresence>
 
-          <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
 
             <AnimatePresence>
               {isSignUp && (
@@ -115,8 +153,10 @@ export default function CustomerLoginPage() {
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       className="w-full pl-11 pr-4 py-3 md:py-4 rounded-xl md:rounded-2xl bg-surface-container-low border-2 border-transparent focus:border-primary focus:bg-white transition-all outline-none text-sm md:text-base"
-                      placeholder="John Highland"
+                      placeholder="Enter full name"
                       type="text"
+                      autoComplete="name"
+                      required
                     />
                   </div>
                 </motion.div>
@@ -159,6 +199,8 @@ export default function CustomerLoginPage() {
                   className="w-full pl-11 pr-11 py-3 md:py-4 rounded-xl md:rounded-2xl bg-surface-container-low border-2 border-transparent focus:border-primary focus:bg-white transition-all outline-none text-sm md:text-base"
                   placeholder="••••••••"
                   type={showPassword ? 'text' : 'password'}
+                  autoComplete={isSignUp ? 'new-password' : 'current-password'}
+                  minLength={isSignUp ? 8 : undefined}
                   required
                 />
                 <button
@@ -172,6 +214,32 @@ export default function CustomerLoginPage() {
               </div>
             </div>
 
+            <AnimatePresence>
+              {isSignUp && (
+                <motion.div
+                  className="space-y-1 md:space-y-2 overflow-hidden"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                >
+                  <label className="text-[10px] md:text-sm font-bold text-secondary uppercase tracking-widest ml-1">Confirm Password</label>
+                  <div className="relative group">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-primary transition-colors w-4 h-4 md:w-5 md:h-5" />
+                    <input
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="w-full pl-11 pr-11 py-3 md:py-4 rounded-xl md:rounded-2xl bg-surface-container-low border-2 border-transparent focus:border-primary focus:bg-white transition-all outline-none text-sm md:text-base"
+                      placeholder="Confirm your password"
+                      type={showPassword ? 'text' : 'password'}
+                      autoComplete="new-password"
+                      minLength={8}
+                      required
+                    />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             <button
               type="submit"
               disabled={loading}
@@ -180,21 +248,24 @@ export default function CustomerLoginPage() {
               {loading ? 'Processing...' : (isSignUp ? 'Create Account' : 'Sign In')}
               {!loading && <ArrowRight className="w-4 h-4 md:w-6 md:h-6" />}
             </button>
-          </form>
+              </form>
 
-          <p className="text-center mt-8 text-on-surface-variant text-[10px] md:text-sm italic">
+              <p className="text-center mt-8 text-on-surface-variant text-[10px] md:text-sm italic">
             {isSignUp ? "Already a member?" : "Don't have an account?"}
             <button
               type="button"
               onClick={() => {
                 setIsSignUp(!isSignUp);
                 setErrorMsg(null);
+                setConfirmPassword('');
               }}
               className="text-primary font-bold not-italic hover:underline ml-1"
             >
               {isSignUp ? "Sign In" : "Sign Up"}
             </button>
-          </p>
+              </p>
+            </>
+          )}
         </motion.div>
       </div>
     </div>

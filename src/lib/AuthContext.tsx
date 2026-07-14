@@ -15,6 +15,7 @@ export interface User {
   email: string;
   phone: string;
   address: string;
+  joinedDate: string;
   orders: Order[];
 }
 
@@ -60,7 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     fetchAdminConfig();
   }, []);
 
-  const fetchProfile = async (id: string, email: string) => {
+  const fetchProfile = async (id: string, email: string, metadata: Record<string, any> = {}) => {
     try {
       const res = await fetch(`/api/users/${id}`);
       if (res.ok) {
@@ -69,19 +70,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           ...profile,
           orders: profile.orders || [] // Ensure orders exist or handle via db
         });
-      } else {
-        // Create emergency dummy object if user not in public.users
-        setUser({
+      } else if (res.status === 404) {
+        const newProfile = {
           id,
-          name: email.split('@')[0],
+          name: metadata.full_name || email.split('@')[0],
           email,
           phone: '',
           address: '',
-          orders: []
+          joinedDate: metadata.joined_date || new Date().toISOString(),
+          role: 'Customer'
+        };
+        const createRes = await fetch('/api/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newProfile)
         });
+        const createdProfile = createRes.ok ? await createRes.json() : newProfile;
+        setUser({ ...createdProfile, orders: createdProfile.orders || [] });
+      } else {
+        throw new Error(`Profile request failed with status ${res.status}`);
       }
-    } catch {
-      console.error("Failed to fetch profile");
+    } catch (error) {
+      console.error("Failed to fetch profile", error);
+      setUser({
+        id,
+        name: metadata.full_name || email.split('@')[0],
+        email,
+        phone: '',
+        address: '',
+        joinedDate: metadata.joined_date || new Date().toISOString(),
+        orders: []
+      });
     }
   };
 
@@ -90,7 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { data: { session } } = await supabase.auth.getSession();
       setIsLoggedIn(!!session);
       if (session?.user) {
-        await fetchProfile(session.user.id, session.user.email!);
+        await fetchProfile(session.user.id, session.user.email!, session.user.user_metadata);
       }
     };
     checkSession();
@@ -98,7 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setIsLoggedIn(!!session);
       if (session?.user) {
-         await fetchProfile(session.user.id, session.user.email!);
+         await fetchProfile(session.user.id, session.user.email!, session.user.user_metadata);
       } else {
         setUser(null);
       }
@@ -116,35 +135,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const register = async (name: string, email: string, pass: string) => {
-    // 1. Sign up on Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.signUp({ 
       email, 
-      password: pass 
+      password: pass,
+      options: {
+        emailRedirectTo: `${window.location.origin}/login`,
+        data: {
+          full_name: name,
+          joined_date: new Date().toISOString()
+        }
+      }
     });
     
     if (authError) return { error: authError };
     if (!authData.user) return { error: new Error("Signup failed silently") };
-
-    // 2. Insert record into public.users via backend API
-    const newUserData = {
-      id: authData.user.id, // match auth.users(id)
-      name,
-      email,
-      phone: '',
-      address: '',
-      joinedDate: new Date().toISOString(),
-      role: 'Customer'
-    };
-
-    const res = await fetch('/api/users', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newUserData)
-    });
-
-    if (!res.ok) {
-       console.error("Could not sync user to public table");
-    }
 
     return { data: authData };
   };

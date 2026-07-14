@@ -1,11 +1,9 @@
 import { 
   Contact, 
-  Settings, 
   Receipt, 
   ChevronRight, 
   ShoppingBag, 
   Edit,
-  UserCheck,
   LogOut,
   Save,
   X
@@ -15,6 +13,24 @@ import { useAuth } from '../lib/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 
+function splitPhoneNumber(phone: string) {
+  const match = phone.trim().match(/^(\+\d{1,4})\s*(.*)$/);
+  return {
+    countryCode: match?.[1] || '+66',
+    phoneNumber: match?.[2] || phone.trim()
+  };
+}
+
+function formatAccountDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+}
+
 export default function AccountPage() {
   const { logout, user, updateProfile } = useAuth();
   const navigate = useNavigate();
@@ -22,16 +38,19 @@ export default function AccountPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
     name: '',
-    phone: '',
+    countryCode: '+66',
+    phoneNumber: '',
     address: ''
   });
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (user) {
+      const phone = splitPhoneNumber(user.phone || '');
       setEditForm({
         name: user.name || '',
-        phone: user.phone || '',
+        countryCode: phone.countryCode,
+        phoneNumber: phone.phoneNumber,
         address: user.address || ''
       });
     }
@@ -44,9 +63,12 @@ export default function AccountPage() {
 
   const handleSave = async () => {
     setIsSaving(true);
+    const phone = editForm.phoneNumber.trim()
+      ? `${editForm.countryCode} ${editForm.phoneNumber.trim()}`.trim()
+      : '';
     const success = await updateProfile({
       name: editForm.name,
-      phone: editForm.phone,
+      phone,
       address: editForm.address
     });
     setIsSaving(false);
@@ -100,7 +122,7 @@ export default function AccountPage() {
                     )}
                   </AnimatePresence>
                   
-                  <p className="text-secondary font-medium text-sm md:text-xl italic font-serif">Community member since 2024</p>
+                  <p className="text-secondary font-medium text-sm md:text-xl font-serif">{formatAccountDate(user.joinedDate)}</p>
                 </div>
                 <button 
                   onClick={handleLogout}
@@ -125,7 +147,13 @@ export default function AccountPage() {
                     <button 
                       onClick={() => {
                         setIsEditing(false);
-                        setEditForm({ name: user.name || '', phone: user.phone || '', address: user.address || '' });
+                        const phone = splitPhoneNumber(user.phone || '');
+                        setEditForm({
+                          name: user.name || '',
+                          countryCode: phone.countryCode,
+                          phoneNumber: phone.phoneNumber,
+                          address: user.address || ''
+                        });
                       }}
                       className="bg-surface-container-highest text-on-surface px-4 md:px-10 py-2 md:py-4 rounded-lg md:rounded-2xl font-bold flex items-center gap-1.5 md:gap-3 hover:bg-surface-container-high transition-all text-[11px] md:text-base"
                     >
@@ -134,19 +162,13 @@ export default function AccountPage() {
                     </button>
                   </>
                 ) : (
-                  <>
-                    <button 
-                      onClick={() => setIsEditing(true)}
-                      className="bg-gradient-to-r from-primary to-primary-container text-white px-4 md:px-10 py-2 md:py-4 rounded-lg md:rounded-2xl font-bold flex items-center gap-1.5 md:gap-3 shadow-lg hover:scale-105 active:scale-95 transition-all text-[11px] md:text-base"
-                    >
-                      <Edit className="w-3.5 h-3.5 md:w-5 md:h-5" />
-                      Edit Profile
-                    </button>
-                    <button className="bg-surface-container-highest text-on-surface px-4 md:px-10 py-2 md:py-4 rounded-lg md:rounded-2xl font-bold flex items-center gap-1.5 md:gap-3 hover:bg-surface-container-high transition-all text-[11px] md:text-base">
-                      <UserCheck className="w-3.5 h-3.5 md:w-5 md:h-5" />
-                      Manage Plan
-                    </button>
-                  </>
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="bg-gradient-to-r from-primary to-primary-container text-white px-4 md:px-10 py-2 md:py-4 rounded-lg md:rounded-2xl font-bold flex items-center gap-1.5 md:gap-3 shadow-lg hover:scale-105 active:scale-95 transition-all text-[11px] md:text-base"
+                  >
+                    <Edit className="w-3.5 h-3.5 md:w-5 md:h-5" />
+                    Edit Profile
+                  </button>
                 )}
               </div>
             </div>
@@ -170,13 +192,28 @@ export default function AccountPage() {
                 <div className="space-y-0.5 md:space-y-2">
                   <label className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-outline opacity-70">Phone Number</label>
                   {isEditing ? (
-                    <input 
-                       type="text"
-                       value={editForm.phone}
-                       onChange={e => setEditForm({...editForm, phone: e.target.value})}
-                       className="text-on-surface bg-surface-container-low font-semibold text-sm md:text-xl font-serif border-b-2 border-primary focus:outline-none w-full py-1"
-                       placeholder="+1 (555) 000-0000"
-                    />
+                    <div className="flex gap-2 md:gap-3">
+                      <input
+                        type="tel"
+                        inputMode="numeric"
+                        value={editForm.countryCode}
+                        onChange={e => {
+                          const digits = e.target.value.replace(/\D/g, '').slice(0, 4);
+                          setEditForm({ ...editForm, countryCode: `+${digits}` });
+                        }}
+                        className="w-20 md:w-24 flex-shrink-0 text-on-surface bg-surface-container-low font-semibold text-sm md:text-lg font-serif border-2 border-transparent focus:border-primary focus:outline-none rounded-lg px-3 py-3 md:py-4"
+                        placeholder="+66"
+                        aria-label="Country code"
+                      />
+                      <input
+                        type="tel"
+                        value={editForm.phoneNumber}
+                        onChange={e => setEditForm({...editForm, phoneNumber: e.target.value})}
+                        className="min-w-0 flex-1 text-on-surface bg-surface-container-low font-semibold text-sm md:text-lg font-serif border-2 border-transparent focus:border-primary focus:outline-none rounded-lg px-3 py-3 md:py-4"
+                        placeholder="Enter phone number"
+                        aria-label="Phone number"
+                      />
+                    </div>
                   ) : (
                     <p className="text-on-surface font-semibold text-sm md:text-xl font-serif">
                        {user.phone || <span className="text-outline italic">Not provided</span>}
@@ -185,13 +222,13 @@ export default function AccountPage() {
                 </div>
 
                 <div className="space-y-0.5 md:space-y-2">
-                  <label className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-outline opacity-70">Primary Residence</label>
+                  <label className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-outline opacity-70">Address</label>
                   {isEditing ? (
                     <textarea 
                        value={editForm.address}
                        onChange={e => setEditForm({...editForm, address: e.target.value})}
-                       className="text-on-surface bg-surface-container-low font-semibold text-sm md:text-xl font-serif italic border-b-2 border-primary focus:outline-none w-full py-1 min-h-[60px]"
-                       placeholder="123 Mountain View Road..."
+                       className="text-on-surface bg-surface-container-low font-semibold text-sm md:text-lg font-serif border-2 border-transparent focus:border-primary focus:outline-none w-full rounded-lg px-3 py-3 md:py-4 min-h-28 md:min-h-32 resize-y"
+                       placeholder="Enter full address"
                     />
                   ) : (
                     <p className="text-on-surface font-semibold text-sm md:text-xl font-serif leading-relaxed italic">
