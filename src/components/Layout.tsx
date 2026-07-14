@@ -5,7 +5,6 @@ import {
   User, 
   Settings, 
   ShoppingCart, 
-  Mountain,
   Menu,
   LogIn
 } from 'lucide-react';
@@ -74,22 +73,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {/* Footer for Desktop */}
       <footer className="bg-surface-container-high py-10 md:py-16 mt-auto">
         <div className="max-w-7xl mx-auto px-6 md:px-8 grid grid-cols-1 md:grid-cols-4 gap-12 text-center md:text-left">
-          <div className="md:col-span-2">
+          <div className="md:col-span-3">
             <span className="font-serif text-2xl text-primary font-bold italic mb-4 block">Altitude Ally</span>
-            <p className="text-on-surface-variant text-sm max-w-xs mx-auto md:mx-0 leading-relaxed">
-              Bridging the gap between the peaks and the plains, one community at a time. Supporting Northern Thailand's high-altitude farmers.
-            </p>
-          </div>
-          <div>
-            <h4 className="font-bold text-xs uppercase tracking-widest mb-4">Connect</h4>
-            <ul className="space-y-2 text-sm text-on-surface-variant">
+            <ul className="flex flex-wrap justify-center md:justify-start gap-x-6 gap-y-2 text-sm text-on-surface-variant">
               <li><Link to="/mission" className="hover:text-primary underline-offset-4 hover:underline">Our Mission</Link></li>
               <li><Link to="/contact" className="hover:text-primary underline-offset-4 hover:underline">Contact Us</Link></li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="font-bold text-xs uppercase tracking-widest mb-4">Legal</h4>
-            <ul className="space-y-2 text-sm text-on-surface-variant">
               <li><Link to="/privacy" className="hover:text-primary underline-offset-4 hover:underline">Privacy</Link></li>
               <li><Link to="/terms" className="hover:text-primary underline-offset-4 hover:underline">Terms</Link></li>
             </ul>
@@ -102,11 +90,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
         <div className="max-w-7xl mx-auto px-8 mt-12 pt-8 border-t border-outline-variant/30 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-on-surface-variant">
-          <p>© 2024 Altitude Ally. Supporting Northern Thailand's Mountains.</p>
-          <div className="flex gap-4">
-            <Mountain className="opacity-40" size={16} />
-            <Leaf className="opacity-40" size={16} />
-          </div>
+          <p>&copy; 2024 Altitude Ally.</p>
+          <img src="/logo.png" className="w-12 h-12 md:w-16 md:h-16 object-contain opacity-70" alt="Altitude Ally Logo" />
         </div>
       </footer>
     </div>
