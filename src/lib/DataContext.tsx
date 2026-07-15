@@ -61,6 +61,16 @@ export interface MarketPageConfig {
   hero_image_url: string;
 }
 
+export interface FooterPageConfig {
+  mission_text: string;
+  privacy_text: string;
+  terms_text: string;
+  instagram: string;
+  email: string;
+  line: string;
+  facebook: string;
+}
+
 interface DataContextType {
   products: Product[];
   orders: Order[];
@@ -83,6 +93,8 @@ interface DataContextType {
   updateImpactPageConfig: (config: ImpactPageConfig) => Promise<void>;
   marketPageConfig: MarketPageConfig | null;
   updateMarketPageConfig: (config: MarketPageConfig) => Promise<void>;
+  footerPageConfig: FooterPageConfig | null;
+  updateFooterPageConfig: (config: FooterPageConfig) => Promise<void>;
   isLoading: boolean;
 }
 
@@ -97,12 +109,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [paymentConfig, setPaymentConfig] = useState<PaymentConfig | null>(null);
   const [impactPageConfig, setImpactPageConfig] = useState<ImpactPageConfig | null>(null);
   const [marketPageConfig, setMarketPageConfig] = useState<MarketPageConfig | null>(null);
+  const [footerPageConfig, setFooterPageConfig] = useState<FooterPageConfig | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [prodRes, catRes, ordRes, usrRes, impactRes, paymentRes, pageConfigRes, marketConfigRes] = await Promise.all([
+        const [prodRes, catRes, ordRes, usrRes, impactRes, paymentRes, pageConfigRes, marketConfigRes, footerConfigRes] = await Promise.all([
           fetch('/api/products'),
           fetch('/api/categories'),
           fetch('/api/orders'),
@@ -110,7 +123,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           fetch('/api/impact/projects'),
           fetch('/api/payment/config'),
           fetch('/api/impact/page_config'),
-          fetch('/api/market/page_config')
+          fetch('/api/market/page_config'),
+          fetch('/api/footer/page_config')
         ]);
         if (prodRes.ok) {
           const productData = await prodRes.json();
@@ -129,6 +143,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         if (paymentRes.ok) setPaymentConfig(await paymentRes.json());
         if (pageConfigRes.ok) setImpactPageConfig(await pageConfigRes.json());
         if (marketConfigRes.ok) setMarketPageConfig(await marketConfigRes.json());
+        if (footerConfigRes.ok) setFooterPageConfig(await footerConfigRes.json());
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
@@ -281,6 +296,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updateFooterPageConfig = async (config: FooterPageConfig) => {
+    const res = await fetch('/api/footer/page_config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config)
+    });
+    if (res.ok) {
+      setFooterPageConfig(await res.json());
+    }
+  };
+
   return (
     <DataContext.Provider value={{ 
       products, 
@@ -291,6 +317,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       paymentConfig,
       impactPageConfig,
       marketPageConfig,
+      footerPageConfig,
       addProduct, 
       updateProduct, 
       deleteProduct, 
@@ -304,6 +331,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       updatePaymentConfig,
       updateImpactPageConfig,
       updateMarketPageConfig,
+      updateFooterPageConfig,
       isLoading 
     }}>
       {children}

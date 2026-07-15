@@ -17,4 +17,36 @@ values (
 )
 on conflict (id) do nothing;
 
+create table if not exists public.footer_page_config (
+  id integer primary key,
+  mission_text text not null,
+  privacy_text text not null,
+  terms_text text not null,
+  instagram text not null,
+  email text not null,
+  line text not null,
+  facebook text not null
+);
+
+insert into public.footer_page_config (
+  id,
+  mission_text,
+  privacy_text,
+  terms_text,
+  instagram,
+  email,
+  line,
+  facebook
+) values (
+  1,
+  'Our mission content will be added here.',
+  'Our privacy policy will be added here.',
+  'Our terms and conditions will be added here.',
+  'Instagram details coming soon.',
+  'Email details coming soon.',
+  'LINE details coming soon.',
+  'Facebook details coming soon.'
+)
+on conflict (id) do nothing;
+
 commit;

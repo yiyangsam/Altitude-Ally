@@ -267,6 +267,31 @@ app.put('/api/market/page_config', async (req, res) => {
   res.json(data[0]);
 });
 
+// --- Footer Page Config Routes ---
+const defaultFooterPageConfig = {
+  id: 1,
+  mission_text: 'Our mission content will be added here.',
+  privacy_text: 'Our privacy policy will be added here.',
+  terms_text: 'Our terms and conditions will be added here.',
+  instagram: 'Instagram details coming soon.',
+  email: 'Email details coming soon.',
+  line: 'LINE details coming soon.',
+  facebook: 'Facebook details coming soon.'
+};
+
+app.get('/api/footer/page_config', async (_req, res) => {
+  const { data, error } = await supabase.from('footer_page_config').select('*').eq('id', 1).single();
+  if (error || !data) return res.json(defaultFooterPageConfig);
+  res.json(data);
+});
+
+app.put('/api/footer/page_config', async (req, res) => {
+  const payload = { id: 1, ...req.body };
+  const { data, error } = await supabase.from('footer_page_config').upsert(payload).select();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data[0]);
+});
+
 if (process.env.NODE_ENV !== 'production') {
   app.listen(port, () => {
     console.log(`Backend server listening at http://localhost:${port}`);

@@ -25,7 +25,7 @@ import { useAuth } from '../lib/AuthContext';
 import { QrCode } from 'lucide-react';
 
 export default function OperatorDashboard() {
-  const { products, orders, users, categories, impactProjects, paymentConfig, impactPageConfig, marketPageConfig, addProduct, updateProduct, deleteProduct, updateOrder, addCategory, deleteCategory, addImpactProject, updateImpactProject, deleteImpactProject, updatePaymentConfig, updateImpactPageConfig, updateMarketPageConfig } = useData();
+  const { products, orders, users, categories, impactProjects, paymentConfig, impactPageConfig, marketPageConfig, footerPageConfig, addProduct, updateProduct, deleteProduct, updateOrder, addCategory, deleteCategory, addImpactProject, updateImpactProject, deleteImpactProject, updatePaymentConfig, updateImpactPageConfig, updateMarketPageConfig, updateFooterPageConfig } = useData();
   const { adminUser, adminPass, updateAdminCredentials } = useAuth();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
@@ -33,7 +33,7 @@ export default function OperatorDashboard() {
   const [isImpactModalOpen, setIsImpactModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isPageConfigModalOpen, setIsPageConfigModalOpen] = useState(false);
-  const [activeConfigTab, setActiveConfigTab] = useState<'main' | 'impact'>('main');
+  const [activeConfigTab, setActiveConfigTab] = useState<'main' | 'impact' | 'footer'>('main');
   const [isViewAllOrdersOpen, setIsViewAllOrdersOpen] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [selectedUserEmail, setSelectedUserEmail] = useState<string | null>(null);
@@ -56,6 +56,15 @@ export default function OperatorDashboard() {
       { label: '', value: 0, color: 'bg-primary-fixed-dim' },
       { label: '', value: 0, color: 'bg-tertiary-fixed-dim' }
     ]
+  });
+  const [footerPageForm, setFooterPageForm] = useState({
+    mission_text: '',
+    privacy_text: '',
+    terms_text: '',
+    instagram: '',
+    email: '',
+    line: '',
+    facebook: ''
   });
 
   useEffect(() => {
@@ -89,6 +98,20 @@ export default function OperatorDashboard() {
       });
     }
   }, [marketPageConfig]);
+
+  useEffect(() => {
+    if (footerPageConfig) {
+      setFooterPageForm({
+        mission_text: footerPageConfig.mission_text || '',
+        privacy_text: footerPageConfig.privacy_text || '',
+        terms_text: footerPageConfig.terms_text || '',
+        instagram: footerPageConfig.instagram || '',
+        email: footerPageConfig.email || '',
+        line: footerPageConfig.line || '',
+        facebook: footerPageConfig.facebook || ''
+      });
+    }
+  }, [footerPageConfig]);
 
   useEffect(() => {
     const isAnyModalOpen = isAddModalOpen || isInventoryModalOpen || isCategoriesModalOpen || isImpactModalOpen || isPaymentModalOpen || isViewAllOrdersOpen || isPageConfigModalOpen || !!selectedOrderId || !!selectedUserEmail;
@@ -246,6 +269,12 @@ export default function OperatorDashboard() {
   const handleMarketPageSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     updateMarketPageConfig(marketPageForm);
+    setIsPageConfigModalOpen(false);
+  };
+
+  const handleFooterPageSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateFooterPageConfig(footerPageForm);
     setIsPageConfigModalOpen(false);
   };
 
@@ -1150,6 +1179,12 @@ export default function OperatorDashboard() {
                 >
                   Impact Page
                 </button>
+                <button
+                  onClick={() => setActiveConfigTab('footer')}
+                  className={`pb-4 font-bold text-sm uppercase tracking-widest whitespace-nowrap transition-colors ${activeConfigTab === 'footer' ? 'text-primary border-b-2 border-primary' : 'text-on-surface-variant hover:text-primary'}`}
+                >
+                  Footer
+                </button>
               </div>
               <div className="p-8 space-y-6 max-h-[60vh] overflow-y-auto no-scrollbar">
                 {activeConfigTab === 'main' && (
@@ -1199,6 +1234,35 @@ export default function OperatorDashboard() {
                     </div>
 
                     <button type="submit" className="w-full bg-primary text-on-primary py-4 rounded-2xl font-bold shadow-lg hover:scale-[0.98] transition-all text-lg">Save Configuration</button>
+                  </form>
+                )}
+
+                {activeConfigTab === 'footer' && (
+                  <form onSubmit={handleFooterPageSubmit} className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-outline ml-2">Our Mission Text</label>
+                      <textarea required className="w-full px-4 py-4 bg-surface-container-low border-none rounded-2xl text-sm font-serif min-h-[110px]" value={footerPageForm.mission_text} onChange={e => setFooterPageForm({...footerPageForm, mission_text: e.target.value})} placeholder="Our mission content will be added here." />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-outline ml-2">Privacy Text</label>
+                      <textarea required className="w-full px-4 py-4 bg-surface-container-low border-none rounded-2xl text-sm font-serif min-h-[110px]" value={footerPageForm.privacy_text} onChange={e => setFooterPageForm({...footerPageForm, privacy_text: e.target.value})} placeholder="Our privacy policy will be added here." />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-outline ml-2">Terms Text</label>
+                      <textarea required className="w-full px-4 py-4 bg-surface-container-low border-none rounded-2xl text-sm font-serif min-h-[110px]" value={footerPageForm.terms_text} onChange={e => setFooterPageForm({...footerPageForm, terms_text: e.target.value})} placeholder="Our terms and conditions will be added here." />
+                    </div>
+
+                    <div className="border-t border-outline-variant/15 pt-6">
+                      <h3 className="mb-4 font-serif text-lg font-bold">Contact Us</h3>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <input required className="w-full px-4 py-4 bg-surface-container-low border-none rounded-2xl text-sm font-serif" value={footerPageForm.instagram} onChange={e => setFooterPageForm({...footerPageForm, instagram: e.target.value})} placeholder="Instagram" aria-label="Instagram contact" />
+                        <input required className="w-full px-4 py-4 bg-surface-container-low border-none rounded-2xl text-sm font-serif" value={footerPageForm.email} onChange={e => setFooterPageForm({...footerPageForm, email: e.target.value})} placeholder="Email" aria-label="Email contact" />
+                        <input required className="w-full px-4 py-4 bg-surface-container-low border-none rounded-2xl text-sm font-serif" value={footerPageForm.line} onChange={e => setFooterPageForm({...footerPageForm, line: e.target.value})} placeholder="LINE" aria-label="LINE contact" />
+                        <input required className="w-full px-4 py-4 bg-surface-container-low border-none rounded-2xl text-sm font-serif" value={footerPageForm.facebook} onChange={e => setFooterPageForm({...footerPageForm, facebook: e.target.value})} placeholder="Facebook" aria-label="Facebook contact" />
+                      </div>
+                    </div>
+
+                    <button type="submit" className="w-full bg-primary text-on-primary py-4 rounded-2xl font-bold shadow-lg hover:scale-[0.98] transition-all text-lg">Save Footer Configuration</button>
                   </form>
                 )}
               </div>
