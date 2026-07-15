@@ -51,7 +51,7 @@ export default function MarketPage() {
                          p.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          (p.details || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = activeCategory === 'All Produce' || p.category === activeCategory;
-    return matchesSearch && matchesCategory;
+    return p.availability !== 'hidden' && matchesSearch && matchesCategory;
   });
 
   const openProduct = (p: any) => {
@@ -135,6 +135,11 @@ export default function MarketPage() {
                       src={p.image}
                       referrerPolicy="no-referrer"
                     />
+                    {p.availability === 'out_of_stock' && (
+                      <span className="absolute left-2 top-2 md:left-4 md:top-4 px-2.5 py-1.5 rounded-lg bg-red-600 text-white text-[9px] md:text-xs font-black uppercase shadow-lg">
+                        Out of Stock
+                      </span>
+                    )}
                   </div>
                   <div className="p-2 md:p-8">
                     <div className="flex justify-between items-center mb-1 md:mb-3">
@@ -150,20 +155,17 @@ export default function MarketPage() {
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleAddToCart(p);
+                        openProduct(p);
                       }}
-                      disabled={addedId === p.id}
+                      disabled={p.availability === 'out_of_stock'}
                       className={`w-full py-1.5 md:py-4 rounded-lg md:rounded-2xl font-bold text-[10px] md:text-base flex items-center justify-center gap-1.5 md:gap-3 transition-all active:scale-95 group/btn shadow-sm ${
-                        addedId === p.id 
-                        ? 'bg-secondary text-on-secondary cursor-default' 
+                        p.availability === 'out_of_stock'
+                        ? 'bg-red-100 text-red-700 cursor-not-allowed'
                         : 'bg-surface-container-highest text-on-surface hover:bg-primary hover:text-on-primary'
                       }`}
                     >
-                      {addedId === p.id ? (
-                        <>
-                          <Check className="w-3 h-3 md:w-5 md:h-5 animate-in zoom-in" />
-                          <span>Added</span>
-                        </>
+                      {p.availability === 'out_of_stock' ? (
+                        <span>Out of Stock</span>
                       ) : (
                         <>
                           <ShoppingCart className="group-hover/btn:scale-110 transition-transform w-3 h-3 md:w-5 md:h-5" />
@@ -255,10 +257,11 @@ export default function MarketPage() {
 
                   <button
                     onClick={() => handleAddToCart(selectedProduct, { variation: selectedVariation, portion: selectedPortion })}
-                    className="mt-auto w-full py-4 md:py-5 rounded-2xl bg-primary text-on-primary font-black text-base md:text-xl shadow-xl hover:scale-[0.99] active:scale-95 transition-all flex items-center justify-center gap-3"
+                    disabled={selectedProduct.availability === 'out_of_stock'}
+                    className={`mt-auto w-full py-4 md:py-5 rounded-2xl font-black text-base md:text-xl shadow-xl transition-all flex items-center justify-center gap-3 ${selectedProduct.availability === 'out_of_stock' ? 'bg-red-100 text-red-700 cursor-not-allowed' : 'bg-primary text-on-primary hover:scale-[0.99] active:scale-95'}`}
                   >
                     <ShoppingCart className="w-5 h-5" />
-                    Add Selected Options
+                    {selectedProduct.availability === 'out_of_stock' ? 'Out of Stock' : 'Add Selected Options'}
                   </button>
                 </div>
               </div>

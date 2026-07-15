@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
+export type ProductAvailability = 'visible' | 'out_of_stock' | 'hidden';
+
 export interface Product {
   id: string; // Postgres UUID
   name: string;
@@ -11,6 +13,7 @@ export interface Product {
   image: string;
   variations?: string[];
   portions?: string[];
+  availability: ProductAvailability;
 }
 
 export interface Order {
@@ -133,7 +136,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             description: product.description || '',
             details: product.details || '',
             variations: Array.isArray(product.variations) ? product.variations : [],
-            portions: Array.isArray(product.portions) ? product.portions : []
+            portions: Array.isArray(product.portions) ? product.portions : [],
+            availability: product.availability || 'visible'
           })));
         }
         if (catRes.ok) setCategories(await catRes.json());

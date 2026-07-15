@@ -15,14 +15,38 @@ import {
   ShieldCheck,
   Check,
   Eye,
-  EyeOff
+  EyeOff,
+  Copy,
+  Ban
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useData } from '../lib/DataContext';
+import { useData, type ProductAvailability } from '../lib/DataContext';
 import { useAuth } from '../lib/AuthContext';
 import { QrCode } from 'lucide-react';
+import { getOrderStatusClasses } from '../lib/orderStatus';
+
+const productAvailabilityActions: {
+  value: ProductAvailability;
+  label: string;
+  icon: typeof Eye;
+  classes: string;
+}[] = [
+  { value: 'visible', label: 'Show Product', icon: Eye, classes: 'bg-emerald-600 text-white hover:bg-emerald-700' },
+  { value: 'out_of_stock', label: 'Mark as Out of Stock', icon: Ban, classes: 'bg-red-600 text-white hover:bg-red-700' },
+  { value: 'hidden', label: 'Hide Product', icon: EyeOff, classes: 'bg-gray-600 text-white hover:bg-gray-700' }
+];
+
+function formatDateOnly(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value.split('T')[0] || value;
+  return date.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric'
+  });
+}
 
 export default function OperatorDashboard() {
   const { products, orders, users, categories, impactProjects, paymentConfig, impactPageConfig, marketPageConfig, footerPageConfig, addProduct, updateProduct, deleteProduct, updateOrder, addCategory, deleteCategory, addImpactProject, updateImpactProject, deleteImpactProject, updatePaymentConfig, updateImpactPageConfig, updateMarketPageConfig, updateFooterPageConfig } = useData();
@@ -38,6 +62,7 @@ export default function OperatorDashboard() {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [selectedUserEmail, setSelectedUserEmail] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
 
   const [paymentForm, setPaymentForm] = useState({
     qr_image: '',
@@ -134,7 +159,8 @@ export default function OperatorDashboard() {
     category: categories[0]?.name || 'Uncategorized',
     image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=1000',
     variations: '',
-    portions: ''
+    portions: '',
+    availability: 'visible' as ProductAvailability
   });
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -200,7 +226,8 @@ export default function OperatorDashboard() {
       category: categories[0]?.name || 'Uncategorized',
       image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=1000',
       variations: '',
-      portions: ''
+      portions: '',
+      availability: 'visible'
     });
   };
 
@@ -226,6 +253,29 @@ export default function OperatorDashboard() {
     deleteProduct(id);
     setConfirmDeleteId(null);
     if (editingId === id) setEditingId(null);
+  };
+
+  const handleCopyEmail = async (email: string) => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(email);
+      } else {
+        throw new Error('Clipboard API unavailable');
+      }
+    } catch {
+      const copyField = document.createElement('textarea');
+      copyField.value = email;
+      copyField.style.position = 'fixed';
+      copyField.style.opacity = '0';
+      document.body.appendChild(copyField);
+      copyField.select();
+      const copied = document.execCommand('copy');
+      copyField.remove();
+      if (!copied) return;
+    }
+
+    setCopiedEmail(email);
+    setTimeout(() => setCopiedEmail(current => current === email ? null : current), 1800);
   };
 
   const handleImpactSubmit = (e: React.FormEvent) => {
@@ -280,19 +330,21 @@ export default function OperatorDashboard() {
 
   const selectedOrder = orders.find(o => o.id === selectedOrderId);
   const selectedUser = users.find(u => u.email === selectedUserEmail);
+  const quickActionButtonClasses = 'min-h-[128px] md:min-h-[150px] p-4 md:p-5 flex flex-col items-start justify-between rounded-2xl md:rounded-3xl shadow-sm hover:scale-[0.98] transition-all';
+  const quickActionLabelClasses = 'font-bold text-left text-sm md:text-base leading-snug font-serif uppercase';
+  const quickActionIconClasses = 'w-7 h-7 md:w-9 md:h-9';
 
   return (
     <div className="min-h-screen bg-surface">
-      <main className="max-w-4xl mx-auto px-6 pt-12 pb-24">
+      <main className="max-w-7xl mx-auto px-4 md:px-8 pt-8 md:pt-12 pb-24">
         {/* Welcome Section */}
-        <section className="mb-12 flex justify-between items-start">
+        <section className="mb-8 md:mb-10 flex justify-between items-center gap-4">
           <div>
-            <h1 className="text-4xl font-bold text-on-surface leading-tight mb-3 font-serif">Operator Console</h1>
-            <p className="text-on-surface-variant text-lg">Managing the community harvest for today, April 17th.</p>
+            <h1 className="text-3xl md:text-4xl font-bold text-on-surface leading-tight font-serif">Operator Console</h1>
           </div>
           <Link 
             to="/" 
-            className="flex items-center gap-2 px-6 py-3 bg-surface-container-high text-primary rounded-2xl font-bold hover:bg-primary/10 transition-all shadow-sm group"
+            className="flex items-center gap-2 px-4 md:px-5 py-2.5 md:py-3 bg-surface-container-high text-primary rounded-xl font-bold text-sm md:text-base hover:bg-primary/10 transition-all shadow-sm group"
           >
             <Home size={20} className="group-hover:-translate-y-0.5 transition-transform" />
             <span>Home</span>
@@ -300,48 +352,48 @@ export default function OperatorDashboard() {
         </section>
 
         {/* Quick Actions Grid */}
-        <section className="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-16">
+        <section className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4 mb-12 md:mb-16">
           <button 
             onClick={() => setIsAddModalOpen(true)}
-            className="flex flex-col items-start justify-between p-6 md:p-8 bg-primary-container text-on-primary-container rounded-[2rem] aspect-square shadow-xl hover:scale-95 transition-all group"
+            className={`${quickActionButtonClasses} bg-primary-container text-on-primary-container group`}
           >
-            <PlusCircle className="group-hover:rotate-90 transition-transform" size={40} />
-            <span className="font-bold text-left text-base md:text-lg leading-tight font-serif uppercase tracking-tight">Add New<br/>Product</span>
+            <PlusCircle className={`${quickActionIconClasses} group-hover:rotate-90 transition-transform`} />
+            <span className={quickActionLabelClasses}>Add Product</span>
           </button>
           <button 
             onClick={() => setIsInventoryModalOpen(true)}
-            className="flex flex-col items-start justify-between p-6 md:p-8 bg-surface-container-high text-on-surface rounded-[2rem] aspect-square shadow-sm hover:scale-95 transition-all"
+            className={`${quickActionButtonClasses} bg-surface-container-high text-on-surface`}
           >
-            <Package className="text-primary" size={40} />
-            <span className="font-bold text-left text-base md:text-lg leading-tight font-serif uppercase tracking-tight">Update<br/>Inventory</span>
+            <Package className={`${quickActionIconClasses} text-primary`} />
+            <span className={quickActionLabelClasses}>Inventory</span>
           </button>
           <button 
             onClick={() => setIsCategoriesModalOpen(true)}
-            className="flex flex-col items-start justify-between p-6 md:p-8 bg-secondary-container text-on-secondary-container rounded-[2rem] aspect-square shadow-sm hover:scale-95 transition-all"
+            className={`${quickActionButtonClasses} bg-secondary-container text-on-secondary-container`}
           >
-            <Tag className="text-secondary" size={40} />
-            <span className="font-bold text-left text-base md:text-lg leading-tight font-serif uppercase tracking-tight">Manage<br/>Categories</span>
+            <Tag className={`${quickActionIconClasses} text-secondary`} />
+            <span className={quickActionLabelClasses}>Categories</span>
           </button>
           <button 
             onClick={() => setIsImpactModalOpen(true)}
-            className="flex flex-col items-start justify-between p-6 md:p-8 bg-tertiary-container text-on-tertiary-container rounded-[2rem] aspect-square shadow-sm hover:scale-95 transition-all group"
+            className={`${quickActionButtonClasses} bg-tertiary-container text-on-tertiary-container group`}
           >
-            <Leaf className="group-hover:rotate-12 transition-transform text-tertiary" size={40} />
-            <span className="font-bold text-left text-base md:text-lg leading-tight font-serif uppercase tracking-tight">Impact<br/>Projects</span>
+            <Leaf className={`${quickActionIconClasses} group-hover:rotate-12 transition-transform text-tertiary`} />
+            <span className={quickActionLabelClasses}>Impact Projects</span>
           </button>
           <button 
             onClick={() => setIsPaymentModalOpen(true)}
-            className="flex flex-col items-start justify-between p-6 md:p-8 bg-surface-container-highest text-on-surface rounded-[2rem] aspect-square shadow-sm hover:scale-95 transition-all group"
+            className={`${quickActionButtonClasses} bg-surface-container-highest text-on-surface group`}
           >
-            <QrCode className="text-secondary" size={40} />
-            <span className="font-bold text-left text-base md:text-lg leading-tight font-serif uppercase tracking-tight">Payment<br/>Setup</span>
+            <QrCode className={`${quickActionIconClasses} text-secondary`} />
+            <span className={quickActionLabelClasses}>Payment Setup</span>
           </button>
           <button 
             onClick={() => setIsPageConfigModalOpen(true)}
-            className="flex flex-col items-start justify-between p-6 md:p-8 bg-surface-container-high text-on-surface rounded-[2rem] aspect-square shadow-sm hover:scale-95 transition-all group"
+            className={`${quickActionButtonClasses} bg-surface-container-high text-on-surface group`}
           >
-            <Edit2 className="text-primary" size={40} />
-            <span className="font-bold text-left text-base md:text-lg leading-tight font-serif uppercase tracking-tight">Page<br/>Config</span>
+            <Edit2 className={`${quickActionIconClasses} text-primary`} />
+            <span className={quickActionLabelClasses}>Page Config</span>
           </button>
         </section>
 
@@ -369,12 +421,12 @@ export default function OperatorDashboard() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.1 }}
                   onClick={() => setSelectedOrderId(order.id)}
-                  className="bg-surface-container-low p-6 rounded-[2rem] border border-outline-variant/30 flex justify-between items-center hover:bg-surface-container-high transition-colors cursor-pointer"
+                  className="bg-surface-container-low p-5 md:p-6 rounded-2xl border border-outline-variant/30 flex flex-col md:flex-row justify-between md:items-center gap-4 hover:bg-surface-container-high transition-colors cursor-pointer"
                 >
-                  <div>
+                  <div className="min-w-0">
                     <p className="font-bold text-xl text-on-surface">{order.customerName}</p>
-                    <p className="text-sm text-on-surface-variant italic">Order {order.id} • ฿{order.total.toLocaleString()}</p>
-                    <div className="flex gap-2 mt-2">
+                    <p className="text-sm text-on-surface-variant italic">{formatDateOnly(order.date)}</p>
+                    <div className="flex flex-wrap gap-2 mt-2">
                       {order.items.map((item, idx) => (
                         <span key={idx} className="text-[9px] uppercase font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">
                           {item}
@@ -382,9 +434,14 @@ export default function OperatorDashboard() {
                       ))}
                     </div>
                   </div>
-                  <span className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest bg-surface-container-highest shadow-sm`}>
-                    {order.status}
-                  </span>
+                  <div className="flex items-center gap-2 self-stretch md:self-auto">
+                    <span className={`flex-1 md:flex-none px-4 py-2 rounded-lg text-sm md:text-base font-black uppercase text-center border ${getOrderStatusClasses(order.status)}`}>
+                      {order.status}
+                    </span>
+                    <span className="flex-1 md:flex-none px-4 py-2 rounded-lg text-sm md:text-base font-black text-center bg-on-surface text-surface shadow-sm">
+                      ฿{order.total.toLocaleString()}
+                    </span>
+                  </div>
                 </motion.div>
               ))
             )}
@@ -410,23 +467,38 @@ export default function OperatorDashboard() {
                 <div 
                   key={user.email} 
                   onClick={() => setSelectedUserEmail(user.email)}
-                  className="p-6 flex items-center justify-between hover:bg-surface-container-low transition-colors cursor-pointer"
+                  className="p-5 md:p-6 grid grid-cols-[auto_minmax(0,1fr)] md:grid-cols-[minmax(240px,1.1fr)_minmax(260px,1fr)_auto] items-center gap-4 md:gap-6 hover:bg-surface-container-low transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-lg shadow-inner">
+                    <div className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-base md:text-lg shadow-inner flex-shrink-0">
                       {user.name.split(' ').map(n => n[0]).join('')}
                     </div>
-                    <div>
-                      <p className="font-bold text-xl text-on-surface">{user.name}</p>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] uppercase font-extrabold text-secondary tracking-widest">{user.role}</span>
-                        <span className="text-[10px] text-on-surface-variant opacity-60">• {user.email}</span>
-                      </div>
+                    <div className="min-w-0">
+                      <p className="font-bold text-lg md:text-xl text-on-surface truncate">{user.name}</p>
+                      <span className="text-[10px] uppercase font-extrabold text-secondary tracking-widest">{user.role}</span>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="col-span-2 md:col-span-1 min-w-0">
+                    <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest mb-1">Email</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-base md:text-lg font-bold text-on-surface break-all">{user.email}</p>
+                      <button
+                        type="button"
+                        title={copiedEmail === user.email ? 'Copied' : 'Copy email'}
+                        aria-label={copiedEmail === user.email ? `Copied ${user.email}` : `Copy ${user.email}`}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleCopyEmail(user.email);
+                        }}
+                        className="p-2.5 rounded-lg bg-surface-container-high text-primary hover:bg-primary hover:text-on-primary transition-colors flex-shrink-0"
+                      >
+                        {copiedEmail === user.email ? <Check size={18} /> : <Copy size={18} />}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="col-span-2 md:col-span-1 text-left md:text-right">
                     <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest mb-1">Joined</p>
-                    <p className="font-bold text-lg text-primary">{user.joinedDate}</p>
+                    <p className="font-bold text-base md:text-lg text-primary whitespace-nowrap">{formatDateOnly(user.joinedDate)}</p>
                   </div>
                 </div>
               ))}
@@ -576,17 +648,13 @@ export default function OperatorDashboard() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-outline ml-2">Sale Unit</label>
-                    <select 
+                    <input
+                      required
                       className="block w-full px-6 py-4 bg-surface-container-low border-none rounded-2xl text-lg font-serif appearance-none"
+                      placeholder="e.g. kg, box, tray"
                       value={newProduct.unit}
                       onChange={e => setNewProduct({...newProduct, unit: e.target.value})}
-                    >
-                      <option>kg</option>
-                      <option>g</option>
-                      <option>each</option>
-                      <option>bunch</option>
-                      <option>bag</option>
-                    </select>
+                    />
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-outline ml-2">Category</label>
@@ -682,7 +750,7 @@ export default function OperatorDashboard() {
                 <h2 className="text-2xl font-serif font-black italic">Update Inventory</h2>
                 <button onClick={() => setIsInventoryModalOpen(false)} className="p-2 hover:bg-surface-container-high rounded-full transition-colors"><X /></button>
               </div>
-              <div className="p-8 max-h-[70vh] overflow-y-auto no-scrollbar space-y-6">
+              <div className="p-4 md:p-8 max-h-[70vh] overflow-y-auto no-scrollbar space-y-6">
                 {products.map(p => (
                   <div key={p.id} className="bg-surface-container-lowest p-6 rounded-[2rem] border border-outline-variant/10 shadow-sm">
                     {editingId === p.id ? (
@@ -701,13 +769,7 @@ export default function OperatorDashboard() {
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-1">
                             <label className="text-[10px] font-black uppercase tracking-widest text-outline ml-2">Unit</label>
-                            <select className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={editForm.unit} onChange={e => setEditForm({...editForm, unit: e.target.value})}>
-                              <option>kg</option>
-                              <option>g</option>
-                              <option>each</option>
-                              <option>bunch</option>
-                              <option>bag</option>
-                            </select>
+                            <input className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={editForm.unit} onChange={e => setEditForm({...editForm, unit: e.target.value})} placeholder="e.g. kg, box, tray" />
                           </div>
                           <div className="space-y-1">
                             <label className="text-[10px] font-black uppercase tracking-widest text-outline ml-2">Category</label>
@@ -751,10 +813,15 @@ export default function OperatorDashboard() {
                         </div>
                       </form>
                     ) : (
-                      <div className="flex items-center gap-6">
-                        <img src={p.image} alt={p.name} className="w-24 h-24 rounded-2xl object-cover shadow-md" />
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-4 md:gap-6">
+                        <img src={p.image} alt={p.name} className="w-full sm:w-24 h-40 sm:h-24 rounded-2xl object-cover shadow-md" />
                         <div className="flex-grow">
-                          <h4 className="font-bold text-xl mb-1">{p.name}</h4>
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
+                            <h4 className="font-bold text-xl">{p.name}</h4>
+                            <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase ${p.availability === 'visible' ? 'bg-emerald-100 text-emerald-800' : p.availability === 'out_of_stock' ? 'bg-red-100 text-red-800' : 'bg-gray-200 text-gray-700'}`}>
+                              {p.availability === 'visible' ? 'Shown' : p.availability === 'out_of_stock' ? 'Out of Stock' : 'Hidden'}
+                            </span>
+                          </div>
                           <p className="text-sm text-on-surface-variant italic mb-2">฿{p.price.toLocaleString()} / {p.unit}</p>
                           <p className="text-xs text-on-surface-variant line-clamp-2">{p.description}</p>
                           {((p.variations?.length || 0) > 0 || (p.portions?.length || 0) > 0) && (
@@ -768,7 +835,7 @@ export default function OperatorDashboard() {
                             </div>
                           )}
                         </div>
-                        <div className="flex flex-col gap-2">
+                        <div className="flex sm:flex-col gap-2">
                           {confirmDeleteId === p.id ? (
                             <div className="flex flex-col gap-2">
                               <button onClick={() => handleDelete(p.id)} className="px-4 py-2 bg-error text-on-error rounded-xl text-xs font-bold">Confirm Delete</button>
@@ -789,10 +856,10 @@ export default function OperatorDashboard() {
                                   variations: p.variations?.join(', ') || '',
                                   portions: p.portions?.join(', ') || ''
                                 }); 
-                              }} className="p-4 bg-primary/10 text-primary rounded-2xl hover:bg-primary/20 transition-all">
+                              }} title="Edit product" aria-label={`Edit ${p.name}`} className="p-3 md:p-4 bg-primary/10 text-primary rounded-xl hover:bg-primary/20 transition-all">
                                 <Edit2 size={24} />
                               </button>
-                              <button onClick={() => setConfirmDeleteId(p.id)} className="p-4 bg-error/10 text-error rounded-2xl hover:bg-error/20 transition-all">
+                              <button onClick={() => setConfirmDeleteId(p.id)} title="Delete product" aria-label={`Delete ${p.name}`} className="p-3 md:p-4 bg-error/10 text-error rounded-xl hover:bg-error/20 transition-all">
                                 <Trash2 size={24} />
                               </button>
                             </>
@@ -800,6 +867,27 @@ export default function OperatorDashboard() {
                         </div>
                       </div>
                     )}
+                    <div className="mt-5 pt-5 border-t border-outline-variant/15">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-outline mb-3">Store Status</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        {productAvailabilityActions.map((action) => {
+                          const StatusIcon = action.icon;
+                          const isActive = p.availability === action.value;
+                          return (
+                            <button
+                              key={action.value}
+                              type="button"
+                              aria-pressed={isActive}
+                              onClick={() => updateProduct(p.id, { availability: action.value })}
+                              className={`min-h-11 px-3 py-2.5 rounded-lg text-[11px] md:text-xs font-black flex items-center justify-center gap-2 transition-all ${action.classes} ${isActive ? 'ring-2 ring-on-surface/30 ring-offset-2 ring-offset-surface-container-lowest' : 'opacity-80 hover:opacity-100'}`}
+                            >
+                              {isActive ? <Check size={16} /> : <StatusIcon size={16} />}
+                              <span>{action.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -815,14 +903,14 @@ export default function OperatorDashboard() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedOrderId(null)} className="absolute inset-0 bg-on-surface/40 backdrop-blur-sm" />
             <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }} className="relative w-full max-w-lg bg-surface rounded-[3rem] shadow-2xl overflow-hidden border border-outline-variant/20">
               <div className="p-8 border-b border-outline-variant/10 flex justify-between items-center text-primary">
-                <h2 className="text-2xl font-serif font-black italic">Order {selectedOrder.id}</h2>
+                <h2 className="text-2xl font-serif font-black italic">Order Details</h2>
                 <button onClick={() => setSelectedOrderId(null)} className="p-2 hover:bg-surface-container-high rounded-full transition-colors"><X /></button>
               </div>
               <div className="p-8 space-y-8 max-h-[75vh] overflow-y-auto no-scrollbar">
                 <div>
                   <label className="text-[10px] font-black uppercase tracking-widest text-outline">Customer</label>
                   <p className="text-2xl font-serif font-bold text-on-surface">{selectedOrder.customerName}</p>
-                  <p className="text-sm text-on-surface-variant">{selectedOrder.date}</p>
+                  <p className="text-sm text-on-surface-variant">{formatDateOnly(selectedOrder.date)}</p>
                 </div>
 
                 <div>
@@ -843,7 +931,7 @@ export default function OperatorDashboard() {
                   </div>
                   <div className="text-right">
                     <label className="text-[10px] font-black uppercase tracking-widest text-outline">Status</label>
-                    <p className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest bg-surface-container-highest`}>
+                    <p className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase border ${getOrderStatusClasses(selectedOrder.status)}`}>
                       {selectedOrder.status}
                     </p>
                   </div>
@@ -858,9 +946,9 @@ export default function OperatorDashboard() {
                         onClick={() => {
                           updateOrder(selectedOrder.id, { status: status as any });
                         }}
-                        className={`py-3 rounded-xl text-xs font-bold uppercase tracking-tight transition-all border-2 ${
+                        className={`py-3 rounded-xl text-xs font-bold uppercase transition-all border-2 ${
                           selectedOrder.status === status 
-                          ? 'bg-primary text-on-primary border-primary' 
+                          ? getOrderStatusClasses(status)
                           : 'bg-surface hover:bg-surface-container-high border-outline-variant'
                         }`}
                       >
@@ -893,15 +981,20 @@ export default function OperatorDashboard() {
                       setSelectedOrderId(order.id);
                       setIsViewAllOrdersOpen(false);
                     }}
-                    className="bg-surface-container-low p-6 rounded-[2rem] border border-outline-variant/30 flex justify-between items-center hover:bg-surface-container-high transition-colors cursor-pointer"
+                    className="bg-surface-container-low p-5 md:p-6 rounded-2xl border border-outline-variant/30 flex flex-col sm:flex-row justify-between sm:items-center gap-3 hover:bg-surface-container-high transition-colors cursor-pointer"
                   >
                     <div>
                       <p className="font-bold text-xl text-on-surface">{order.customerName}</p>
-                      <p className="text-sm text-on-surface-variant italic">Order {order.id} • ฿{order.total.toLocaleString()} • {order.date}</p>
+                      <p className="text-sm text-on-surface-variant italic">{formatDateOnly(order.date)}</p>
                     </div>
-                    <span className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest bg-surface-container-highest shadow-sm`}>
-                      {order.status}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={`flex-1 px-4 py-2 rounded-lg text-sm font-black uppercase text-center border ${getOrderStatusClasses(order.status)}`}>
+                        {order.status}
+                      </span>
+                      <span className="flex-1 px-4 py-2 rounded-lg text-sm font-black text-center bg-on-surface text-surface">
+                        ฿{order.total.toLocaleString()}
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -934,7 +1027,18 @@ export default function OperatorDashboard() {
                 <div className="grid grid-cols-1 gap-6 bg-surface-container-low p-8 rounded-[2rem]">
                   <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase tracking-widest text-outline">Email Address</label>
-                    <p className="text-lg font-medium text-on-surface">{selectedUser.email}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xl md:text-2xl font-bold text-on-surface break-all">{selectedUser.email}</p>
+                      <button
+                        type="button"
+                        title={copiedEmail === selectedUser.email ? 'Copied' : 'Copy email'}
+                        aria-label={copiedEmail === selectedUser.email ? `Copied ${selectedUser.email}` : `Copy ${selectedUser.email}`}
+                        onClick={() => handleCopyEmail(selectedUser.email)}
+                        className="p-3 rounded-lg bg-surface-container-high text-primary hover:bg-primary hover:text-on-primary transition-colors flex-shrink-0"
+                      >
+                        {copiedEmail === selectedUser.email ? <Check size={20} /> : <Copy size={20} />}
+                      </button>
+                    </div>
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase tracking-widest text-outline">Phone Number</label>
@@ -942,7 +1046,7 @@ export default function OperatorDashboard() {
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase tracking-widest text-outline">Membership Since</label>
-                    <p className="text-lg font-medium text-on-surface">{selectedUser.joinedDate}</p>
+                    <p className="text-lg font-medium text-on-surface">{formatDateOnly(selectedUser.joinedDate)}</p>
                   </div>
                 </div>
 

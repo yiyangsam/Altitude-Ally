@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../lib/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { getOrderStatusClasses } from '../lib/orderStatus';
 
 function splitPhoneNumber(phone: string) {
   const match = phone.trim().match(/^(\+\d{1,4})\s*(.*)$/);
@@ -263,12 +264,12 @@ export default function AccountPage() {
                     <div className="flex-grow w-full">
                       <div className="flex justify-between items-start mb-2 md:mb-4">
                         <div>
-                          <h4 className="font-bold text-sm md:text-2xl mb-0.5 font-serif line-clamp-1">Order {order.id}</h4>
+                          <h4 className="font-bold text-sm md:text-2xl mb-0.5 font-serif line-clamp-1">Harvest Order</h4>
                           <p className="text-on-surface-variant text-[9px] md:text-sm font-medium italic">{order.date}</p>
                         </div>
                         <div className="text-right">
                           <p className="font-black text-sm md:text-2xl text-on-surface font-serif">฿{order.total.toLocaleString()}</p>
-                          <span className={`inline-flex items-center gap-1 px-1.5 md:px-3 py-0.5 md:py-1 rounded text-[8px] md:text-[10px] font-black uppercase tracking-widest mt-1 md:mt-2 ${order.status === 'Pending' ? 'text-tertiary-container bg-tertiary-fixed' : 'text-primary-container bg-primary-fixed'}`}>
+                          <span className={`inline-flex items-center gap-1 px-1.5 md:px-3 py-0.5 md:py-1 rounded-md text-[8px] md:text-[10px] font-black uppercase mt-1 md:mt-2 border ${getOrderStatusClasses(order.status)}`}>
                             {order.status}
                           </span>
                         </div>

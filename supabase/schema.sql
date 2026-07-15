@@ -12,6 +12,7 @@ create table public.products (
   details text,
   variations jsonb not null default '[]'::jsonb,
   portions jsonb not null default '[]'::jsonb,
+  availability text not null default 'visible' check (availability in ('visible', 'out_of_stock', 'hidden')),
   image text,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
@@ -20,6 +21,7 @@ create table public.products (
 alter table public.products add column if not exists details text;
 alter table public.products add column if not exists variations jsonb not null default '[]'::jsonb;
 alter table public.products add column if not exists portions jsonb not null default '[]'::jsonb;
+alter table public.products add column if not exists availability text not null default 'visible';
 
 -- Orders Table
 create table public.orders (

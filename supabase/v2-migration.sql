@@ -3,7 +3,8 @@ begin;
 alter table public.products
   add column if not exists details text,
   add column if not exists variations jsonb not null default '[]'::jsonb,
-  add column if not exists portions jsonb not null default '[]'::jsonb;
+  add column if not exists portions jsonb not null default '[]'::jsonb,
+  add column if not exists availability text not null default 'visible';
 
 create table if not exists public.market_page_config (
   id integer primary key,
