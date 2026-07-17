@@ -115,10 +115,7 @@ export default function CheckoutPage() {
           <div className="w-20 h-20 md:w-24 md:h-24 bg-primary/10 rounded-full flex items-center justify-center text-primary mx-auto mb-6">
             <CheckCircle2 className="w-12 h-12 md:w-16 md:h-16 animate-in zoom-in duration-500" />
           </div>
-          <h2 className="text-3xl md:text-4xl font-serif font-black text-on-surface mb-4 italic">Harvest Requested!</h2>
-          <p className="text-sm md:text-base text-on-surface-variant leading-relaxed italic max-w-lg mx-auto">
-            Your request has been sent to our highland logistics team. We'll notify you when the delivery is en route from the mountains.
-          </p>
+          <h2 className="text-3xl md:text-4xl font-serif font-black text-on-surface italic">Order Registered</h2>
 
           <div className="mt-8 border-t border-outline-variant/20 pt-7 text-left">
             <h3 className="text-xl md:text-2xl font-serif font-bold text-on-surface mb-4">How to Contact Us</h3>
