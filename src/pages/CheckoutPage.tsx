@@ -15,6 +15,10 @@ import {
   Edit3, 
   ChevronRight,
   QrCode,
+  Instagram,
+  Mail,
+  MessageCircle,
+  Facebook,
   User as UserIcon
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -23,7 +27,7 @@ import { useState } from 'react';
 export default function CheckoutPage() {
   const { cart, removeFromCart, updateQuantity, totalPrice, clearCart } = useCart();
   const { user, updateProfile, isLoggedIn, addOrder: addUserOrder } = useAuth();
-  const { addOrder: addGlobalOrder, paymentConfig } = useData();
+  const { addOrder: addGlobalOrder, paymentConfig, footerPageConfig } = useData();
   const navigate = useNavigate();
   
   const [isSuccess, setIsSuccess] = useState(false);
@@ -88,38 +92,60 @@ export default function CheckoutPage() {
   const handleCheckout = () => {
     if (checkoutStep !== 'payment' || !isOrderSubmitted) return;
 
+    clearCart();
     setIsSuccess(true);
-    setTimeout(() => {
-      clearCart();
-      navigate('/account');
-    }, 4000);
   };
 
   if (isSuccess) {
+    const contactDetails = [
+      { label: 'Instagram', value: footerPageConfig?.instagram || 'Instagram details coming soon.', icon: Instagram },
+      { label: 'Email', value: footerPageConfig?.email || 'Email details coming soon.', icon: Mail },
+      { label: 'LINE', value: footerPageConfig?.line || 'LINE details coming soon.', icon: MessageCircle },
+      { label: 'Facebook', value: footerPageConfig?.facebook || 'Facebook details coming soon.', icon: Facebook }
+    ];
+
     return (
-      <div className="min-h-screen bg-surface flex items-center justify-center p-6">
-        <motion.div 
+      <div className="min-h-[calc(100vh-6rem)] md:min-h-[calc(100vh-8rem)] bg-surface flex items-center justify-center px-4 py-8 md:py-12">
+        <motion.section
+          aria-live="polite"
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="max-w-md w-full bg-surface-container-lowest p-12 rounded-[3.5rem] text-center shadow-2xl border border-outline-variant/10"
+          className="max-w-2xl w-full bg-surface-container-lowest p-6 md:p-10 rounded-2xl text-center shadow-2xl border border-outline-variant/10"
         >
-          <div className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center text-primary mx-auto mb-8">
-            <CheckCircle2 size={64} className="animate-in zoom-in duration-500" />
+          <div className="w-20 h-20 md:w-24 md:h-24 bg-primary/10 rounded-full flex items-center justify-center text-primary mx-auto mb-6">
+            <CheckCircle2 className="w-12 h-12 md:w-16 md:h-16 animate-in zoom-in duration-500" />
           </div>
-          <h2 className="text-4xl font-serif font-black text-on-surface mb-4 italic">Harvest Requested!</h2>
-          <p className="text-on-surface-variant leading-relaxed mb-12 italic">
+          <h2 className="text-3xl md:text-4xl font-serif font-black text-on-surface mb-4 italic">Harvest Requested!</h2>
+          <p className="text-sm md:text-base text-on-surface-variant leading-relaxed italic max-w-lg mx-auto">
             Your request has been sent to our highland logistics team. We'll notify you when the delivery is en route from the mountains.
           </p>
-          <div className="h-1.5 w-full bg-surface-container-high rounded-full overflow-hidden">
-            <motion.div 
-              initial={{ width: 0 }}
-              animate={{ width: '100%' }}
-              transition={{ duration: 4 }}
-              className="h-full bg-primary"
-            />
+
+          <div className="mt-8 border-t border-outline-variant/20 pt-7 text-left">
+            <h3 className="text-xl md:text-2xl font-serif font-bold text-on-surface mb-4">How to Contact Us</h3>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {contactDetails.map(({ label, value, icon: Icon }) => (
+                <div key={label} className="flex min-w-0 items-start gap-3 rounded-xl bg-surface-container-low p-4">
+                  <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <Icon size={18} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold uppercase text-on-surface-variant">{label}</p>
+                    <p className="mt-1 break-words text-sm text-on-surface">{value}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-outline mt-4">Returning to home...</p>
-        </motion.div>
+
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 py-4 text-base md:text-lg font-bold text-on-primary shadow-lg transition-all hover:brightness-110 active:scale-[0.98]"
+          >
+            <ArrowLeft size={20} />
+            Back to Home
+          </button>
+        </motion.section>
       </div>
     );
   }
