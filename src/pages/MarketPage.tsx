@@ -3,6 +3,7 @@ import {
   Search, 
   ShoppingCart, 
   Plus, 
+  Minus,
   MapPin, 
   Leaf, 
   ArrowRight,
@@ -20,7 +21,7 @@ import { useData } from '../lib/DataContext';
 
 export default function MarketPage() {
   const navigate = useNavigate();
-  const { addToCart } = useCart();
+  const { cart, addToCart, updateQuantity } = useCart();
   const { products, categories: dataCategories, marketPageConfig } = useData();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('All Produce');
@@ -33,10 +34,13 @@ export default function MarketPage() {
 
   const categories = ['All Produce', ...dataCategories.map(c => c.name)];
 
+  const getConfiguredProductId = (p: any, options?: { variation?: string; portion?: string }) =>
+    [p.id, options?.variation, options?.portion].filter(Boolean).join('-');
+
   const handleAddToCart = (p: any, options?: { variation?: string; portion?: string }) => {
     const configuredProduct = {
       ...p,
-      id: [p.id, options?.variation, options?.portion].filter(Boolean).join('-'),
+      id: getConfiguredProductId(p, options),
       productId: p.id,
       selectedVariation: options?.variation,
       selectedPortion: options?.portion
@@ -58,6 +62,21 @@ export default function MarketPage() {
     setSelectedProduct(p);
     setSelectedVariation(p.variations?.[0] || '');
     setSelectedPortion(p.portions?.[0] || '');
+  };
+
+  const selectedCartItemId = selectedProduct
+    ? getConfiguredProductId(selectedProduct, { variation: selectedVariation, portion: selectedPortion })
+    : '';
+  const selectedCartItem = cart.find(item => item.id === selectedCartItemId);
+  const selectedQuantity = selectedCartItem?.quantity || 0;
+
+  const changeSelectedQuantity = (change: number) => {
+    if (!selectedProduct || selectedProduct.availability === 'out_of_stock') return;
+    if (!selectedCartItem && change > 0) {
+      handleAddToCart(selectedProduct, { variation: selectedVariation, portion: selectedPortion });
+      return;
+    }
+    updateQuantity(selectedCartItemId, selectedQuantity + change);
   };
 
   return (
@@ -255,14 +274,38 @@ export default function MarketPage() {
                     )}
                   </div>
 
-                  <button
-                    onClick={() => handleAddToCart(selectedProduct, { variation: selectedVariation, portion: selectedPortion })}
-                    disabled={selectedProduct.availability === 'out_of_stock'}
-                    className={`mt-auto w-full py-4 md:py-5 rounded-2xl font-black text-base md:text-xl shadow-xl transition-all flex items-center justify-center gap-3 ${selectedProduct.availability === 'out_of_stock' ? 'bg-red-100 text-red-700 cursor-not-allowed' : 'bg-primary text-on-primary hover:scale-[0.99] active:scale-95'}`}
-                  >
-                    <ShoppingCart className="w-5 h-5" />
-                    {selectedProduct.availability === 'out_of_stock' ? 'Out of Stock' : 'Add Selected Options'}
-                  </button>
+                  {selectedQuantity > 0 ? (
+                    <div className="mt-auto w-full min-h-[60px] md:min-h-[68px] rounded-2xl bg-primary text-on-primary shadow-xl grid grid-cols-[64px_1fr_64px] md:grid-cols-[76px_1fr_76px] items-stretch overflow-hidden" aria-label={`Quantity for ${selectedProduct.name}`}>
+                      <button
+                        type="button"
+                        onClick={() => changeSelectedQuantity(-1)}
+                        aria-label={`Decrease ${selectedProduct.name} quantity`}
+                        className="flex items-center justify-center border-r border-on-primary/25 hover:bg-on-primary/10 active:bg-on-primary/20 transition-colors"
+                      >
+                        <Minus className="w-5 h-5 md:w-6 md:h-6" />
+                      </button>
+                      <span className="flex items-center justify-center text-xl md:text-2xl font-black" aria-live="polite">
+                        {selectedQuantity}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => changeSelectedQuantity(1)}
+                        aria-label={`Increase ${selectedProduct.name} quantity`}
+                        className="flex items-center justify-center border-l border-on-primary/25 hover:bg-on-primary/10 active:bg-on-primary/20 transition-colors"
+                      >
+                        <Plus className="w-5 h-5 md:w-6 md:h-6" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => changeSelectedQuantity(1)}
+                      disabled={selectedProduct.availability === 'out_of_stock'}
+                      className={`mt-auto w-full min-h-[60px] md:min-h-[68px] px-5 rounded-2xl font-black text-base md:text-xl shadow-xl transition-all flex items-center justify-center gap-3 ${selectedProduct.availability === 'out_of_stock' ? 'bg-red-100 text-red-700 cursor-not-allowed' : 'bg-primary text-on-primary hover:scale-[0.99] active:scale-95'}`}
+                    >
+                      <ShoppingCart className="w-5 h-5" />
+                      {selectedProduct.availability === 'out_of_stock' ? 'Out of Stock' : 'Add Selected Options'}
+                    </button>
+                  )}
                 </div>
               </div>
             </motion.div>
