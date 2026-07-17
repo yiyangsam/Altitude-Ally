@@ -199,10 +199,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newOrderData)
     });
-    if (res.ok) {
-      const createdOrder = await res.json();
-      setOrders(prev => [createdOrder, ...prev]);
+    if (!res.ok) {
+      const errorBody = await res.json().catch(() => null);
+      throw new Error(errorBody?.error || 'Unable to create order');
     }
+    const createdOrder = await res.json();
+    setOrders(prev => [createdOrder, ...prev]);
   };
 
   const updateOrder = async (id: string, updates: Partial<Order>) => {

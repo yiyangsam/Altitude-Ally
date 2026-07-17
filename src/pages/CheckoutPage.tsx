@@ -14,13 +14,14 @@ import {
   Phone, 
   Edit3, 
   ChevronRight,
+  QrCode,
   User as UserIcon
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 
 export default function CheckoutPage() {
-  const { cart, removeFromCart, updateQuantity, totalPrice, totalItems, clearCart } = useCart();
+  const { cart, removeFromCart, updateQuantity, totalPrice, clearCart } = useCart();
   const { user, updateProfile, isLoggedIn, addOrder: addUserOrder } = useAuth();
   const { addOrder: addGlobalOrder, paymentConfig } = useData();
   const navigate = useNavigate();
@@ -29,13 +30,18 @@ export default function CheckoutPage() {
   const [checkoutStep, setCheckoutStep] = useState<'basket' | 'details' | 'payment'>('basket');
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
+  const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
+  const [isOrderSubmitted, setIsOrderSubmitted] = useState(false);
+  const [orderError, setOrderError] = useState('');
   const [tempDetails, setTempDetails] = useState({
     address: user?.address || '',
     phone: user?.phone || ''
   });
 
-  const deliveryFee = totalItems > 0 ? 150 : 0;
-  const grandTotal = totalPrice + deliveryFee;
+  const grandTotal = totalPrice;
+  const paymentBankInfo = paymentConfig?.bank_info
+    .replace(/\s*\(Altitude Collectives\)\s*/gi, ' ')
+    .trim();
 
   const handleNextStep = () => {
     if (!isLoggedIn) {
@@ -50,21 +56,37 @@ export default function CheckoutPage() {
     setIsEditingDetails(false);
   };
 
-  const handleCheckout = () => {
-    if (checkoutStep !== 'payment') return;
-    
-    // Persist order to user context
-    addUserOrder({
-      total: grandTotal,
-      items: cart.map(item => `${item.quantity}x ${item.name}`)
-    });
+  const handleConfirmOrder = async () => {
+    if (!isConfirmed || isEditingDetails || isSubmittingOrder || isOrderSubmitted) return;
 
-    // Persist order to global data context
-    addGlobalOrder({
-      customerName: user?.name || 'Anonymous',
-      total: grandTotal,
-      items: cart.map(item => `${item.quantity}x ${item.name}`)
-    });
+    setIsSubmittingOrder(true);
+    setOrderError('');
+
+    const orderItems = cart.map(item => `${item.quantity}x ${item.name}`);
+
+    try {
+      await addGlobalOrder({
+        customerName: user?.name || 'Anonymous',
+        total: grandTotal,
+        items: orderItems
+      });
+
+      addUserOrder({
+        total: grandTotal,
+        items: orderItems
+      });
+      setIsOrderSubmitted(true);
+      setCheckoutStep('payment');
+    } catch (error) {
+      console.error('Unable to submit order:', error);
+      setOrderError('We could not confirm your order. Please try again.');
+    } finally {
+      setIsSubmittingOrder(false);
+    }
+  };
+
+  const handleCheckout = () => {
+    if (checkoutStep !== 'payment' || !isOrderSubmitted) return;
 
     setIsSuccess(true);
     setTimeout(() => {
@@ -214,7 +236,6 @@ export default function CheckoutPage() {
                           </div>
                           <div>
                             <h3 className="text-base md:text-2xl font-bold font-serif">Contact Info</h3>
-                            <p className="text-on-surface-variant text-[10px] md:text-sm italic">For delivery coordination</p>
                           </div>
                         </div>
                         {!isEditingDetails && checkoutStep === 'details' && (
@@ -342,16 +363,6 @@ export default function CheckoutPage() {
                       </div>
                     </div>
 
-                    <div className="bg-secondary-container/30 p-8 rounded-[2.5rem] border border-secondary/10 flex items-start gap-4">
-                      <ShieldCheck className="text-secondary mt-1" size={24} />
-                      <div>
-                        <h4 className="font-bold font-serif mb-1">Community Protection</h4>
-                        <p className="text-sm text-on-surface-variant italic leading-relaxed">
-                          Your contact details are encrypted and only shared with verified highland community logistics operators during active delivery.
-                        </p>
-                      </div>
-                    </div>
-
                     <button 
                       onClick={() => setCheckoutStep(checkoutStep === 'payment' ? 'details' : 'basket')}
                       className="text-primary font-bold flex items-center gap-2 hover:translate-x-[-4px] transition-transform"
@@ -374,10 +385,6 @@ export default function CheckoutPage() {
                     <span>Subtotal</span>
                     <span className="text-on-surface">฿{totalPrice.toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between text-on-surface-variant font-medium text-xs md:text-sm">
-                    <span>Logistics Fee</span>
-                    <span className="text-on-surface">฿{deliveryFee.toLocaleString()}</span>
-                  </div>
                 </div>
 
                 <div className="flex justify-between items-end mb-6 md:mb-12">
@@ -395,18 +402,27 @@ export default function CheckoutPage() {
                   </button>
                 ) : checkoutStep === 'details' ? (
                   <div className="space-y-6">
+                    <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-surface-container-lowest p-4 text-sm text-on-surface-variant">
+                      <QrCode className="mt-0.5 h-5 w-5 flex-shrink-0 text-primary" />
+                      <p className="leading-relaxed">On the next page, scan the QR code to complete your payment.</p>
+                    </div>
                     <button 
-                      onClick={() => setCheckoutStep('payment')}
-                      disabled={!isConfirmed || isEditingDetails}
+                      onClick={handleConfirmOrder}
+                      disabled={!isConfirmed || isEditingDetails || isSubmittingOrder || isOrderSubmitted}
                       className={`w-full py-4 md:py-6 rounded-xl md:rounded-2xl font-bold text-base md:text-xl shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2 md:gap-3 mb-4 md:mb-6 ${
-                        isConfirmed && !isEditingDetails
+                        isConfirmed && !isEditingDetails && !isSubmittingOrder && !isOrderSubmitted
                         ? 'bg-primary text-on-primary hover:scale-[1.02]' 
                         : 'bg-surface-container-highest text-outline opacity-50 cursor-not-allowed'
                       }`}
                     >
-                      Proceed to Payment
+                      {isSubmittingOrder ? 'Confirming Order...' : 'Confirm Order, Await Payment'}
                       <ChevronRight className="w-5 h-5 md:w-6 md:h-6" />
                     </button>
+                    {orderError && (
+                      <p role="alert" className="text-center text-sm font-bold text-error">
+                        {orderError}
+                      </p>
+                    )}
                   </div>
                 ) : (
                   <div className="space-y-6">
@@ -418,7 +434,7 @@ export default function CheckoutPage() {
                         ) : (
                           <div className="w-32 h-32 md:w-48 md:h-48 rounded-xl bg-surface-container-lowest border border-dashed border-outline-variant/30 flex items-center justify-center text-outline text-[10px] uppercase mb-4">No QR Configured</div>
                         )}
-                        <p className="font-serif text-sm md:text-base text-on-surface whitespace-pre-wrap font-bold italic">{paymentConfig.bank_info}</p>
+                        <p className="font-serif text-sm md:text-base text-on-surface whitespace-pre-wrap font-bold italic">{paymentBankInfo}</p>
                       </div>
                     )}
                     
@@ -427,7 +443,7 @@ export default function CheckoutPage() {
                       className="w-full py-4 md:py-6 rounded-xl md:rounded-2xl bg-primary text-on-primary font-bold text-base md:text-xl shadow-xl hover:scale-[1.02] transition-all active:scale-95 flex items-center justify-center gap-2 md:gap-3 mb-4 md:mb-6"
                     >
                       <CreditCard className="w-5 h-5 md:w-6 md:h-6" />
-                      Paid & Confirm Flow
+                      Confirm Payment
                     </button>
                   </div>
                 )}
