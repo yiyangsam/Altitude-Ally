@@ -1,18 +1,10 @@
-import { 
-  Store, 
-  Leaf, 
-  Calendar, 
-  User, 
-  Settings, 
-  ShoppingCart, 
-  Menu,
-  LogIn,
+import {
+  ShoppingCart,
   X,
   Instagram,
   Mail,
   MessageCircle,
-  Facebook,
-  HeartHandshake
+  Facebook
 } from 'lucide-react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
@@ -74,29 +66,25 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="fixed top-0 w-full z-50 glass-nav border-b border-outline-variant/15 px-4 md:px-6">
-        <nav className="flex items-center h-24 md:h-32 max-w-7xl mx-auto w-full gap-4">
+      <header className="fixed top-0 w-full z-50 glass-nav border-b border-outline-variant/15 px-2 sm:px-4 md:px-6">
+        <nav className="flex items-center h-24 md:h-32 max-w-7xl mx-auto w-full gap-2 md:gap-4">
           <Link to="/" className="flex items-center gap-2 group flex-shrink-0">
-            <img src="/logo.png" className="w-20 h-20 md:w-28 md:h-28 group-hover:scale-110 transition-transform" alt="Altitude Ally Logo" />
+            <img src="/logo.png" className="w-16 h-16 sm:w-20 sm:h-20 md:w-28 md:h-28 group-hover:scale-110 transition-transform" alt="Altitude Ally Logo" />
             <span className="font-serif italic font-bold text-primary text-sm md:text-xl tracking-tight hidden sm:inline">Altitude Ally</span>
           </Link>
           
           <div className="flex items-center gap-2 md:gap-8 flex-1 justify-center md:justify-end overflow-x-auto no-scrollbar py-2">
-            <NavLink to="/" aria-label="Store" className={({ isActive }) => `flex items-center gap-1 font-serif text-xs md:text-lg transition-all whitespace-nowrap ${isActive ? 'text-primary' : 'text-on-surface-variant hover:text-primary'}`}>
-              <Store className="w-3.5 h-3.5 md:hidden" />
-              <span className="hidden sm:inline">Store</span>
+            <NavLink to="/" aria-label="Store" className={({ isActive }) => `flex min-h-11 items-center px-0.5 font-serif text-sm font-bold md:px-0 md:text-lg transition-all whitespace-nowrap ${isActive ? 'text-primary' : 'text-on-surface-variant hover:text-primary'}`}>
+              <span>Store</span>
             </NavLink>
-            <NavLink to="/impact" aria-label="Impact" className={({ isActive }) => `flex items-center gap-1 font-serif text-xs md:text-lg transition-all whitespace-nowrap ${isActive ? 'text-primary' : 'text-on-surface-variant hover:text-primary'}`}>
-              <Leaf className="w-3.5 h-3.5 md:hidden" />
-              <span className="hidden sm:inline">Impact</span>
+            <NavLink to="/impact" aria-label="Impact" className={({ isActive }) => `flex min-h-11 items-center px-0.5 font-serif text-sm font-bold md:px-0 md:text-lg transition-all whitespace-nowrap ${isActive ? 'text-primary' : 'text-on-surface-variant hover:text-primary'}`}>
+              <span>Impact</span>
             </NavLink>
-            <NavLink to="/donation" aria-label="Donate" className={({ isActive }) => `flex items-center gap-1 font-serif text-xs md:text-lg transition-all whitespace-nowrap ${isActive ? 'text-primary' : 'text-on-surface-variant hover:text-primary'}`}>
-              <HeartHandshake className="w-3.5 h-3.5 md:hidden" />
-              <span className="hidden sm:inline">Donate</span>
+            <NavLink to="/donation" aria-label="Donate" className={({ isActive }) => `flex min-h-11 items-center px-0.5 font-serif text-sm font-bold md:px-0 md:text-lg transition-all whitespace-nowrap ${isActive ? 'text-primary' : 'text-on-surface-variant hover:text-primary'}`}>
+              <span>Donate</span>
             </NavLink>
-            <NavLink to="/account" aria-label={isLoggedIn ? 'Account' : 'Login'} className={({ isActive }) => `flex items-center gap-1 font-serif text-xs md:text-lg transition-all whitespace-nowrap ${isActive ? 'text-primary' : 'text-on-surface-variant hover:text-primary'}`}>
-              {isLoggedIn ? <User className="w-3.5 h-3.5 md:hidden" /> : <LogIn className="w-3.5 h-3.5 md:hidden" />}
-              <span className="hidden sm:inline">{isLoggedIn ? 'Account' : 'Login'}</span>
+            <NavLink to="/account" aria-label={isLoggedIn ? 'Account' : 'Login'} className={({ isActive }) => `flex min-h-11 items-center px-0.5 font-serif text-sm font-bold md:px-0 md:text-lg transition-all whitespace-nowrap ${isActive ? 'text-primary' : 'text-on-surface-variant hover:text-primary'}`}>
+              <span>{isLoggedIn ? 'Account' : 'Login'}</span>
             </NavLink>
           </div>
  
