@@ -69,8 +69,11 @@ create table public.impact_projects (
   amount text not null,
   status text not null,
   image text not null,
+  details text not null default '',
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+alter table public.impact_projects add column if not exists details text not null default '';
 
 -- Admin Config Table
 create table public.admin_config (
@@ -108,6 +111,38 @@ insert into public.impact_page_config (id, hero_title, hero_description, familie
   'Together, we''ve cultivated more than just produce. We''ve planted the seeds of nutrition and community for 800+ families.', 
   '800+', 
   '[{"label":"Garden Infrastructure","value":65,"color":"bg-primary"},{"label":"Seed Distribution","value":25,"color":"bg-primary-fixed-dim"},{"label":"Community Workshops","value":10,"color":"bg-tertiary-fixed-dim"}]'::jsonb
+);
+
+-- Donation Page Config Table
+create table public.donation_page_config (
+  id integer primary key default 1,
+  title text not null,
+  subtitle text not null,
+  bottom_title text not null,
+  tzuchi_link_text text not null,
+  tzuchi_link_url text not null,
+  qr_image text not null,
+  qr_caption text not null
+);
+
+insert into public.donation_page_config (
+  id,
+  title,
+  subtitle,
+  bottom_title,
+  tzuchi_link_text,
+  tzuchi_link_url,
+  qr_image,
+  qr_caption
+) values (
+  1,
+  'Placeholder',
+  'Placeholder',
+  'Placeholder',
+  'Placeholder',
+  'https://www.tzuchi.org.tw/en/',
+  '',
+  'Placeholder'
 );
 
 -- Market Page Config Table

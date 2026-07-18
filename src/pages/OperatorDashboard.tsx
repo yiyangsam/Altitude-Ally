@@ -48,8 +48,17 @@ function formatDateOnly(value: string) {
   });
 }
 
+function loadImageFile(file: File | undefined, onLoad: (dataUrl: string) => void) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    if (typeof reader.result === 'string') onLoad(reader.result);
+  };
+  reader.readAsDataURL(file);
+}
+
 export default function OperatorDashboard() {
-  const { products, orders, users, categories, impactProjects, paymentConfig, impactPageConfig, marketPageConfig, footerPageConfig, addProduct, updateProduct, deleteProduct, updateOrder, addCategory, deleteCategory, addImpactProject, updateImpactProject, deleteImpactProject, updatePaymentConfig, updateImpactPageConfig, updateMarketPageConfig, updateFooterPageConfig } = useData();
+  const { products, orders, users, categories, impactProjects, paymentConfig, impactPageConfig, donationPageConfig, marketPageConfig, footerPageConfig, addProduct, updateProduct, deleteProduct, updateOrder, addCategory, deleteCategory, addImpactProject, updateImpactProject, deleteImpactProject, updatePaymentConfig, updateImpactPageConfig, updateDonationPageConfig, updateMarketPageConfig, updateFooterPageConfig } = useData();
   const { adminUser, adminPass, updateAdminCredentials } = useAuth();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
@@ -57,7 +66,7 @@ export default function OperatorDashboard() {
   const [isImpactModalOpen, setIsImpactModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isPageConfigModalOpen, setIsPageConfigModalOpen] = useState(false);
-  const [activeConfigTab, setActiveConfigTab] = useState<'main' | 'impact' | 'footer'>('main');
+  const [activeConfigTab, setActiveConfigTab] = useState<'main' | 'impact' | 'donation' | 'footer'>('main');
   const [isViewAllOrdersOpen, setIsViewAllOrdersOpen] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [selectedUserEmail, setSelectedUserEmail] = useState<string | null>(null);
@@ -81,6 +90,15 @@ export default function OperatorDashboard() {
       { label: '', value: 0, color: 'bg-primary-fixed-dim' },
       { label: '', value: 0, color: 'bg-tertiary-fixed-dim' }
     ]
+  });
+  const [donationPageForm, setDonationPageForm] = useState({
+    title: '',
+    subtitle: '',
+    bottom_title: '',
+    tzuchi_link_text: '',
+    tzuchi_link_url: '',
+    qr_image: '',
+    qr_caption: ''
   });
   const [footerPageForm, setFooterPageForm] = useState({
     mission_text: '',
@@ -115,6 +133,20 @@ export default function OperatorDashboard() {
       });
     }
   }, [impactPageConfig]);
+
+  useEffect(() => {
+    if (donationPageConfig) {
+      setDonationPageForm({
+        title: donationPageConfig.title || '',
+        subtitle: donationPageConfig.subtitle || '',
+        bottom_title: donationPageConfig.bottom_title || '',
+        tzuchi_link_text: donationPageConfig.tzuchi_link_text || '',
+        tzuchi_link_url: donationPageConfig.tzuchi_link_url || '',
+        qr_image: donationPageConfig.qr_image || '',
+        qr_caption: donationPageConfig.qr_caption || ''
+      });
+    }
+  }, [donationPageConfig]);
 
   useEffect(() => {
     if (marketPageConfig) {
@@ -181,7 +213,8 @@ export default function OperatorDashboard() {
     tag: 'Education',
     amount: '',
     status: 'Wait' as 'Active' | 'Wait' | 'Done',
-    image: 'https://images.unsplash.com/photo-1542601906990-b4d3fb75bb44?auto=format&fit=crop&q=80&w=1000'
+    image: 'https://images.unsplash.com/photo-1542601906990-b4d3fb75bb44?auto=format&fit=crop&q=80&w=1000',
+    details: ''
   });
   const [editingImpactId, setEditingImpactId] = useState<string | null>(null);
   const [editImpactForm, setEditImpactForm] = useState({
@@ -189,7 +222,8 @@ export default function OperatorDashboard() {
     tag: '',
     amount: '',
     status: 'Wait' as 'Active' | 'Wait' | 'Done',
-    image: ''
+    image: '',
+    details: ''
   });
 
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -286,7 +320,8 @@ export default function OperatorDashboard() {
       tag: 'Education',
       amount: '',
       status: 'Wait',
-      image: 'https://images.unsplash.com/photo-1542601906990-b4d3fb75bb44?auto=format&fit=crop&q=80&w=1000'
+      image: 'https://images.unsplash.com/photo-1542601906990-b4d3fb75bb44?auto=format&fit=crop&q=80&w=1000',
+      details: ''
     });
   };
 
@@ -313,6 +348,12 @@ export default function OperatorDashboard() {
   const handleImpactPageSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     updateImpactPageConfig(impactPageForm);
+    setIsPageConfigModalOpen(false);
+  };
+
+  const handleDonationPageSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateDonationPageConfig(donationPageForm);
     setIsPageConfigModalOpen(false);
   };
 
@@ -379,7 +420,7 @@ export default function OperatorDashboard() {
             className={`${quickActionButtonClasses} bg-tertiary-container text-on-tertiary-container group`}
           >
             <Leaf className={`${quickActionIconClasses} group-hover:rotate-12 transition-transform text-tertiary`} />
-            <span className={quickActionLabelClasses}>Impact Projects</span>
+            <span className={quickActionLabelClasses}>Impact / Donation</span>
           </button>
           <button 
             onClick={() => setIsPaymentModalOpen(true)}
@@ -1113,25 +1154,25 @@ export default function OperatorDashboard() {
         )}
       </AnimatePresence>
 
-      {/* Impact Projects Modal */}
+      {/* Impact / Donation Modal */}
       <AnimatePresence>
         {isImpactModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsImpactModalOpen(false)} className="absolute inset-0 bg-on-surface/40 backdrop-blur-sm" />
             <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }} className="relative w-full max-w-4xl bg-surface rounded-[3rem] shadow-2xl overflow-hidden border border-outline-variant/20">
               <div className="p-8 border-b border-outline-variant/10 flex justify-between items-center text-tertiary">
-                <h2 className="text-2xl font-serif font-black italic">Manage Impact Projects</h2>
+                <h2 className="text-2xl font-serif font-black italic">Manage Impact / Donation</h2>
                 <button onClick={() => setIsImpactModalOpen(false)} className="p-2 hover:bg-surface-container-high rounded-full transition-colors"><X /></button>
               </div>
               <div className="p-8 max-h-[70vh] overflow-y-auto no-scrollbar space-y-6">
-                {/* Add New Impact Project */}
+                {/* Add New Impact / Donation Item */}
                 <form onSubmit={handleImpactSubmit} className="bg-surface-container-lowest p-6 rounded-[2rem] border border-outline-variant/10 shadow-sm space-y-4">
-                  <h3 className="font-bold text-lg font-serif">Add New Project</h3>
-                  <div className="grid grid-cols-2 gap-4">
+                  <h3 className="font-bold text-lg font-serif">Add New Item</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <input required className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={newImpactProject.title} onChange={e => setNewImpactProject({...newImpactProject, title: e.target.value})} placeholder="Project Title" />
                     <input required className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={newImpactProject.amount} onChange={e => setNewImpactProject({...newImpactProject, amount: e.target.value})} placeholder="Amount (e.g. $1.2k)" />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <input required className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={newImpactProject.tag} onChange={e => setNewImpactProject({...newImpactProject, tag: e.target.value})} placeholder="Tag (e.g. Education)" />
                     <select className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={newImpactProject.status} onChange={e => setNewImpactProject({...newImpactProject, status: e.target.value as any})}>
                       <option value="Active">Active</option>
@@ -1140,6 +1181,12 @@ export default function OperatorDashboard() {
                     </select>
                   </div>
                   <input required className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={newImpactProject.image} onChange={e => setNewImpactProject({...newImpactProject, image: e.target.value})} placeholder="Image URL" />
+                  <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-outline-variant/20 bg-surface-container-high px-4 py-3 text-sm font-bold text-primary hover:bg-surface-container-highest">
+                    <ImageIcon size={18} />
+                    Upload Photo
+                    <input type="file" accept="image/*" className="sr-only" onChange={e => loadImageFile(e.target.files?.[0], image => setNewImpactProject({...newImpactProject, image}))} />
+                  </label>
+                  <textarea required className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif min-h-[140px]" value={newImpactProject.details} onChange={e => setNewImpactProject({...newImpactProject, details: e.target.value})} placeholder="Detailed project or donation text" />
                   <button type="submit" className="w-full bg-tertiary text-on-tertiary py-3 rounded-xl font-bold shadow-lg hover:scale-[0.98] transition-all">Create Project</button>
                 </form>
 
@@ -1150,11 +1197,11 @@ export default function OperatorDashboard() {
                   <div key={p.id} className="bg-surface-container-lowest p-6 rounded-[2rem] border border-outline-variant/10 shadow-sm">
                     {editingImpactId === p.id ? (
                       <form onSubmit={handleUpdateImpactSubmit} className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <input required className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={editImpactForm.title} onChange={e => setEditImpactForm({...editImpactForm, title: e.target.value})} placeholder="Project Title" />
                           <input required className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={editImpactForm.amount} onChange={e => setEditImpactForm({...editImpactForm, amount: e.target.value})} placeholder="Amount (e.g. $1.2k)" />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <input required className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={editImpactForm.tag} onChange={e => setEditImpactForm({...editImpactForm, tag: e.target.value})} placeholder="Tag (e.g. Education)" />
                           <select className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={editImpactForm.status} onChange={e => setEditImpactForm({...editImpactForm, status: e.target.value as any})}>
                             <option value="Active">Active</option>
@@ -1163,6 +1210,12 @@ export default function OperatorDashboard() {
                           </select>
                         </div>
                         <input required className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={editImpactForm.image} onChange={e => setEditImpactForm({...editImpactForm, image: e.target.value})} placeholder="Image URL" />
+                        <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-outline-variant/20 bg-surface-container-high px-4 py-3 text-sm font-bold text-primary hover:bg-surface-container-highest">
+                          <ImageIcon size={18} />
+                          Upload Photo
+                          <input type="file" accept="image/*" className="sr-only" onChange={e => loadImageFile(e.target.files?.[0], image => setEditImpactForm({...editImpactForm, image}))} />
+                        </label>
+                        <textarea required className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif min-h-[140px]" value={editImpactForm.details} onChange={e => setEditImpactForm({...editImpactForm, details: e.target.value})} placeholder="Detailed project or donation text" />
                         <div className="flex gap-4 pt-2">
                           <button type="submit" className="flex-1 bg-tertiary text-on-tertiary py-3 rounded-xl font-bold shadow-lg hover:scale-95 transition-all">Save</button>
                           <button type="button" onClick={() => setEditingImpactId(null)} className="flex-1 bg-surface-container-high py-3 rounded-xl font-bold hover:scale-95 transition-all">Cancel</button>
@@ -1194,7 +1247,8 @@ export default function OperatorDashboard() {
                                   tag: p.tag,
                                   amount: p.amount,
                                   status: p.status,
-                                  image: p.image 
+                                  image: p.image,
+                                  details: p.details || ''
                                 }); 
                               }} className="p-4 bg-tertiary/10 text-tertiary rounded-2xl hover:bg-tertiary/20 transition-all">
                                 <Edit2 size={24} />
@@ -1270,7 +1324,7 @@ export default function OperatorDashboard() {
                 </div>
                 <button onClick={() => setIsPageConfigModalOpen(false)} className="p-2 hover:bg-surface-container-high rounded-full transition-colors"><X /></button>
               </div>
-              <div className="flex px-8 pt-4 gap-4 border-b border-outline-variant/10">
+              <div className="flex overflow-x-auto px-8 pt-4 gap-5 border-b border-outline-variant/10 no-scrollbar">
                 <button 
                   onClick={() => setActiveConfigTab('main')}
                   className={`pb-4 font-bold text-sm uppercase tracking-widest transition-colors ${activeConfigTab === 'main' ? 'text-primary border-b-2 border-primary' : 'text-on-surface-variant hover:text-primary'}`}
@@ -1282,6 +1336,12 @@ export default function OperatorDashboard() {
                   className={`pb-4 font-bold text-sm uppercase tracking-widest transition-colors ${activeConfigTab === 'impact' ? 'text-primary border-b-2 border-primary' : 'text-on-surface-variant hover:text-primary'}`}
                 >
                   Impact Page
+                </button>
+                <button
+                  onClick={() => setActiveConfigTab('donation')}
+                  className={`shrink-0 pb-4 font-bold text-sm uppercase tracking-widest whitespace-nowrap transition-colors ${activeConfigTab === 'donation' ? 'text-primary border-b-2 border-primary' : 'text-on-surface-variant hover:text-primary'}`}
+                >
+                  Donation Page
                 </button>
                 <button
                   onClick={() => setActiveConfigTab('footer')}
@@ -1338,6 +1398,50 @@ export default function OperatorDashboard() {
                     </div>
 
                     <button type="submit" className="w-full bg-primary text-on-primary py-4 rounded-2xl font-bold shadow-lg hover:scale-[0.98] transition-all text-lg">Save Configuration</button>
+                  </form>
+                )}
+
+                {activeConfigTab === 'donation' && (
+                  <form onSubmit={handleDonationPageSubmit} className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-outline ml-2">Page Title</label>
+                      <input required className="w-full px-4 py-4 bg-surface-container-low border-none rounded-2xl text-sm font-serif" value={donationPageForm.title} onChange={e => setDonationPageForm({...donationPageForm, title: e.target.value})} placeholder="Placeholder" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-outline ml-2">Page Subheading</label>
+                      <textarea required className="w-full px-4 py-4 bg-surface-container-low border-none rounded-2xl text-sm font-serif min-h-[90px]" value={donationPageForm.subtitle} onChange={e => setDonationPageForm({...donationPageForm, subtitle: e.target.value})} placeholder="Placeholder" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-outline ml-2">Bottom Subtitle</label>
+                      <input required className="w-full px-4 py-4 bg-surface-container-low border-none rounded-2xl text-sm font-serif" value={donationPageForm.bottom_title} onChange={e => setDonationPageForm({...donationPageForm, bottom_title: e.target.value})} placeholder="Placeholder" />
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-outline ml-2">Tzu Chi Link Text</label>
+                        <input required className="w-full px-4 py-4 bg-surface-container-low border-none rounded-2xl text-sm font-serif" value={donationPageForm.tzuchi_link_text} onChange={e => setDonationPageForm({...donationPageForm, tzuchi_link_text: e.target.value})} placeholder="Placeholder" />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-outline ml-2">Tzu Chi URL</label>
+                        <input required type="url" className="w-full px-4 py-4 bg-surface-container-low border-none rounded-2xl text-sm font-serif" value={donationPageForm.tzuchi_link_url} onChange={e => setDonationPageForm({...donationPageForm, tzuchi_link_url: e.target.value})} placeholder="https://..." />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-outline ml-2">Direct Donation QR Image</label>
+                      <input className="w-full px-4 py-4 bg-surface-container-low border-none rounded-2xl text-sm font-serif" value={donationPageForm.qr_image} onChange={e => setDonationPageForm({...donationPageForm, qr_image: e.target.value})} placeholder="Image URL" />
+                      <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-outline-variant/20 bg-surface-container-high px-4 py-3 text-sm font-bold text-primary hover:bg-surface-container-highest">
+                        <ImageIcon size={18} />
+                        Upload QR Image
+                        <input type="file" accept="image/*" className="sr-only" onChange={e => loadImageFile(e.target.files?.[0], qr_image => setDonationPageForm({...donationPageForm, qr_image}))} />
+                      </label>
+                    </div>
+                    {donationPageForm.qr_image && (
+                      <img src={donationPageForm.qr_image} alt="Donation QR preview" className="mx-auto aspect-square w-48 rounded-2xl bg-white object-contain p-3" />
+                    )}
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-outline ml-2">QR Caption</label>
+                      <input required className="w-full px-4 py-4 bg-surface-container-low border-none rounded-2xl text-sm font-serif" value={donationPageForm.qr_caption} onChange={e => setDonationPageForm({...donationPageForm, qr_caption: e.target.value})} placeholder="Placeholder" />
+                    </div>
+                    <button type="submit" className="w-full bg-primary text-on-primary py-4 rounded-2xl font-bold shadow-lg hover:scale-[0.98] transition-all text-lg">Save Donation Page</button>
                   </form>
                 )}
 

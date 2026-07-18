@@ -46,6 +46,7 @@ export interface ImpactProject {
   amount: string;
   status: 'Active' | 'Wait' | 'Done';
   image: string;
+  details: string;
 }
 
 export interface PaymentConfig {
@@ -58,6 +59,16 @@ export interface ImpactPageConfig {
   hero_description: string;
   families_served: string;
   transparency_stats: { label: string; value: number; color: string }[];
+}
+
+export interface DonationPageConfig {
+  title: string;
+  subtitle: string;
+  bottom_title: string;
+  tzuchi_link_text: string;
+  tzuchi_link_url: string;
+  qr_image: string;
+  qr_caption: string;
 }
 
 export interface MarketPageConfig {
@@ -94,6 +105,8 @@ interface DataContextType {
   updatePaymentConfig: (config: PaymentConfig) => Promise<void>;
   impactPageConfig: ImpactPageConfig | null;
   updateImpactPageConfig: (config: ImpactPageConfig) => Promise<void>;
+  donationPageConfig: DonationPageConfig | null;
+  updateDonationPageConfig: (config: DonationPageConfig) => Promise<void>;
   marketPageConfig: MarketPageConfig | null;
   updateMarketPageConfig: (config: MarketPageConfig) => Promise<void>;
   footerPageConfig: FooterPageConfig | null;
@@ -111,6 +124,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [impactProjects, setImpactProjects] = useState<ImpactProject[]>([]);
   const [paymentConfig, setPaymentConfig] = useState<PaymentConfig | null>(null);
   const [impactPageConfig, setImpactPageConfig] = useState<ImpactPageConfig | null>(null);
+  const [donationPageConfig, setDonationPageConfig] = useState<DonationPageConfig | null>(null);
   const [marketPageConfig, setMarketPageConfig] = useState<MarketPageConfig | null>(null);
   const [footerPageConfig, setFooterPageConfig] = useState<FooterPageConfig | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -118,7 +132,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [prodRes, catRes, ordRes, usrRes, impactRes, paymentRes, pageConfigRes, marketConfigRes, footerConfigRes] = await Promise.all([
+        const [prodRes, catRes, ordRes, usrRes, impactRes, paymentRes, pageConfigRes, donationConfigRes, marketConfigRes, footerConfigRes] = await Promise.all([
           fetch('/api/products'),
           fetch('/api/categories'),
           fetch('/api/orders'),
@@ -126,6 +140,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           fetch('/api/impact/projects'),
           fetch('/api/payment/config'),
           fetch('/api/impact/page_config'),
+          fetch('/api/donation/page_config'),
           fetch('/api/market/page_config'),
           fetch('/api/footer/page_config')
         ]);
@@ -143,9 +158,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         if (catRes.ok) setCategories(await catRes.json());
         if (ordRes.ok) setOrders(await ordRes.json());
         if (usrRes.ok) setUsers(await usrRes.json());
-        if (impactRes.ok) setImpactProjects(await impactRes.json());
+        if (impactRes.ok) {
+          const projectData = await impactRes.json();
+          setImpactProjects(projectData.map((project: ImpactProject) => ({
+            ...project,
+            details: project.details || ''
+          })));
+        }
         if (paymentRes.ok) setPaymentConfig(await paymentRes.json());
         if (pageConfigRes.ok) setImpactPageConfig(await pageConfigRes.json());
+        if (donationConfigRes.ok) setDonationPageConfig(await donationConfigRes.json());
         if (marketConfigRes.ok) setMarketPageConfig(await marketConfigRes.json());
         if (footerConfigRes.ok) setFooterPageConfig(await footerConfigRes.json());
       } catch (error) {
@@ -291,6 +313,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updateDonationPageConfig = async (config: DonationPageConfig) => {
+    const res = await fetch('/api/donation/page_config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config)
+    });
+    if (res.ok) {
+      setDonationPageConfig(await res.json());
+    }
+  };
+
   const updateMarketPageConfig = async (config: MarketPageConfig) => {
     const res = await fetch('/api/market/page_config', {
       method: 'PUT',
@@ -322,6 +355,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       impactProjects,
       paymentConfig,
       impactPageConfig,
+      donationPageConfig,
       marketPageConfig,
       footerPageConfig,
       addProduct, 
@@ -336,6 +370,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       deleteImpactProject,
       updatePaymentConfig,
       updateImpactPageConfig,
+      updateDonationPageConfig,
       updateMarketPageConfig,
       updateFooterPageConfig,
       isLoading 

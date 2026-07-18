@@ -11,7 +11,8 @@ import {
   Instagram,
   Mail,
   MessageCircle,
-  Facebook
+  Facebook,
+  HeartHandshake
 } from 'lucide-react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
@@ -80,18 +81,22 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <span className="font-serif italic font-bold text-primary text-sm md:text-xl tracking-tight hidden sm:inline">Altitude Ally</span>
           </Link>
           
-          <div className="flex items-center gap-4 md:gap-8 flex-1 justify-center md:justify-end overflow-x-auto no-scrollbar py-2">
-            <NavLink to="/" className={({ isActive }) => `flex items-center gap-1 font-serif text-xs md:text-lg transition-all whitespace-nowrap ${isActive ? 'text-primary' : 'text-on-surface-variant hover:text-primary'}`}>
+          <div className="flex items-center gap-2 md:gap-8 flex-1 justify-center md:justify-end overflow-x-auto no-scrollbar py-2">
+            <NavLink to="/" aria-label="Store" className={({ isActive }) => `flex items-center gap-1 font-serif text-xs md:text-lg transition-all whitespace-nowrap ${isActive ? 'text-primary' : 'text-on-surface-variant hover:text-primary'}`}>
               <Store className="w-3.5 h-3.5 md:hidden" />
-              Store
+              <span className="hidden sm:inline">Store</span>
             </NavLink>
-            <NavLink to="/impact" className={({ isActive }) => `flex items-center gap-1 font-serif text-xs md:text-lg transition-all whitespace-nowrap ${isActive ? 'text-primary' : 'text-on-surface-variant hover:text-primary'}`}>
+            <NavLink to="/impact" aria-label="Impact" className={({ isActive }) => `flex items-center gap-1 font-serif text-xs md:text-lg transition-all whitespace-nowrap ${isActive ? 'text-primary' : 'text-on-surface-variant hover:text-primary'}`}>
               <Leaf className="w-3.5 h-3.5 md:hidden" />
-              Impact
+              <span className="hidden sm:inline">Impact</span>
             </NavLink>
-            <NavLink to="/account" className={({ isActive }) => `flex items-center gap-1 font-serif text-xs md:text-lg transition-all whitespace-nowrap ${isActive ? 'text-primary' : 'text-on-surface-variant hover:text-primary'}`}>
+            <NavLink to="/donation" aria-label="Donate" className={({ isActive }) => `flex items-center gap-1 font-serif text-xs md:text-lg transition-all whitespace-nowrap ${isActive ? 'text-primary' : 'text-on-surface-variant hover:text-primary'}`}>
+              <HeartHandshake className="w-3.5 h-3.5 md:hidden" />
+              <span className="hidden sm:inline">Donate</span>
+            </NavLink>
+            <NavLink to="/account" aria-label={isLoggedIn ? 'Account' : 'Login'} className={({ isActive }) => `flex items-center gap-1 font-serif text-xs md:text-lg transition-all whitespace-nowrap ${isActive ? 'text-primary' : 'text-on-surface-variant hover:text-primary'}`}>
               {isLoggedIn ? <User className="w-3.5 h-3.5 md:hidden" /> : <LogIn className="w-3.5 h-3.5 md:hidden" />}
-              {isLoggedIn ? 'Account' : 'Login'}
+              <span className="hidden sm:inline">{isLoggedIn ? 'Account' : 'Login'}</span>
             </NavLink>
           </div>
  

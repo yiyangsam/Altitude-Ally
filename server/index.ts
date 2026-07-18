@@ -245,6 +245,31 @@ app.put('/api/impact/page_config', async (req, res) => {
   res.json(data[0]);
 });
 
+// --- Donation Page Config Routes ---
+const defaultDonationPageConfig = {
+  id: 1,
+  title: 'Placeholder',
+  subtitle: 'Placeholder',
+  bottom_title: 'Placeholder',
+  tzuchi_link_text: 'Placeholder',
+  tzuchi_link_url: 'https://www.tzuchi.org.tw/en/',
+  qr_image: '',
+  qr_caption: 'Placeholder'
+};
+
+app.get('/api/donation/page_config', async (_req, res) => {
+  const { data, error } = await supabase.from('donation_page_config').select('*').eq('id', 1).single();
+  if (error || !data) return res.json(defaultDonationPageConfig);
+  res.json(data);
+});
+
+app.put('/api/donation/page_config', async (req, res) => {
+  const payload = { id: 1, ...req.body };
+  const { data, error } = await supabase.from('donation_page_config').upsert(payload).select();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data[0]);
+});
+
 // --- Market Page Config Routes ---
 app.get('/api/market/page_config', async (req, res) => {
   const { data, error } = await supabase.from('market_page_config').select('*').eq('id', 1).single();

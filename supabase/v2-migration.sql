@@ -6,6 +6,41 @@ alter table public.products
   add column if not exists portions jsonb not null default '[]'::jsonb,
   add column if not exists availability text not null default 'visible';
 
+alter table public.impact_projects
+  add column if not exists details text not null default '';
+
+create table if not exists public.donation_page_config (
+  id integer primary key,
+  title text not null,
+  subtitle text not null,
+  bottom_title text not null,
+  tzuchi_link_text text not null,
+  tzuchi_link_url text not null,
+  qr_image text not null,
+  qr_caption text not null
+);
+
+insert into public.donation_page_config (
+  id,
+  title,
+  subtitle,
+  bottom_title,
+  tzuchi_link_text,
+  tzuchi_link_url,
+  qr_image,
+  qr_caption
+) values (
+  1,
+  'Placeholder',
+  'Placeholder',
+  'Placeholder',
+  'Placeholder',
+  'https://www.tzuchi.org.tw/en/',
+  '',
+  'Placeholder'
+)
+on conflict (id) do nothing;
+
 create table if not exists public.market_page_config (
   id integer primary key,
   hero_image_url text not null
