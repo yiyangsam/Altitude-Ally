@@ -120,20 +120,26 @@ app.get('/api/users', async (req, res) => {
 });
 
 app.get('/api/users/:id', async (req, res) => {
+  const userId = req.params.id;
   res.set('Cache-Control', 'private, no-store');
-  const [profileResult, ordersResult] = await Promise.all([
-    supabase.from('users').select('*').eq('id', req.params.id).single(),
-    supabase
-      .from('orders')
-      .select('*')
-      .eq('user_id', req.params.id)
-      .order('created_at', { ascending: false })
-  ]);
+  const profileResult = await supabase.from('users').select('*').eq('id', userId).single();
 
   if (profileResult.error?.code === 'PGRST116') return res.status(404).json({ error: 'User not found' });
   if (profileResult.error) return res.status(500).json({ error: profileResult.error.message });
+
+  const ordersResult = await supabase
+    .from('orders')
+    .select('*')
+    .eq('user_id', profileResult.data.id)
+    .order('created_at', { ascending: false });
+
   if (ordersResult.error) return res.status(500).json({ error: ordersResult.error.message });
-  res.json({ ...profileResult.data, orders: ordersResult.data || [] });
+  const orders = Array.isArray(ordersResult.data)
+    ? ordersResult.data
+    : ordersResult.data
+      ? [ordersResult.data]
+      : [];
+  res.json({ ...profileResult.data, orders });
 });
 
 app.post('/api/users', async (req, res) => {
