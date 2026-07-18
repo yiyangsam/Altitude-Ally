@@ -75,6 +75,18 @@ create table public.impact_projects (
 
 alter table public.impact_projects add column if not exists details text not null default '';
 
+-- Donation Projects Table
+create table public.donation_projects (
+  id uuid default uuid_generate_v4() primary key,
+  title text not null,
+  date date not null,
+  image text not null,
+  description text not null default '',
+  amount text not null default '',
+  amount_enabled boolean not null default false,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
 -- Admin Config Table
 create table public.admin_config (
   id integer primary key default 1,

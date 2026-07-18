@@ -9,6 +9,17 @@ alter table public.products
 alter table public.impact_projects
   add column if not exists details text not null default '';
 
+create table if not exists public.donation_projects (
+  id uuid default uuid_generate_v4() primary key,
+  title text not null,
+  date date not null,
+  image text not null,
+  description text not null default '',
+  amount text not null default '',
+  amount_enabled boolean not null default false,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
 create table if not exists public.donation_page_config (
   id integer primary key,
   title text not null,

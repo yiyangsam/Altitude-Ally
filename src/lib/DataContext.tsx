@@ -49,6 +49,16 @@ export interface ImpactProject {
   details: string;
 }
 
+export interface DonationProject {
+  id: string;
+  title: string;
+  date: string;
+  image: string;
+  description: string;
+  amount: string;
+  amount_enabled: boolean;
+}
+
 export interface PaymentConfig {
   qr_image: string;
   bank_info: string;
@@ -91,6 +101,7 @@ interface DataContextType {
   users: User[];
   categories: Category[];
   impactProjects: ImpactProject[];
+  donationProjects: DonationProject[];
   addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
   updateProduct: (id: string, updates: Partial<Product>) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
@@ -101,6 +112,9 @@ interface DataContextType {
   addImpactProject: (project: Omit<ImpactProject, 'id'>) => Promise<void>;
   updateImpactProject: (id: string, updates: Partial<ImpactProject>) => Promise<void>;
   deleteImpactProject: (id: string) => Promise<void>;
+  addDonationProject: (project: Omit<DonationProject, 'id'>) => Promise<void>;
+  updateDonationProject: (id: string, updates: Partial<DonationProject>) => Promise<void>;
+  deleteDonationProject: (id: string) => Promise<void>;
   paymentConfig: PaymentConfig | null;
   updatePaymentConfig: (config: PaymentConfig) => Promise<void>;
   impactPageConfig: ImpactPageConfig | null;
@@ -122,6 +136,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [impactProjects, setImpactProjects] = useState<ImpactProject[]>([]);
+  const [donationProjects, setDonationProjects] = useState<DonationProject[]>([]);
   const [paymentConfig, setPaymentConfig] = useState<PaymentConfig | null>(null);
   const [impactPageConfig, setImpactPageConfig] = useState<ImpactPageConfig | null>(null);
   const [donationPageConfig, setDonationPageConfig] = useState<DonationPageConfig | null>(null);
@@ -132,12 +147,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [prodRes, catRes, ordRes, usrRes, impactRes, paymentRes, pageConfigRes, donationConfigRes, marketConfigRes, footerConfigRes] = await Promise.all([
+        const [prodRes, catRes, ordRes, usrRes, impactRes, donationProjectsRes, paymentRes, pageConfigRes, donationConfigRes, marketConfigRes, footerConfigRes] = await Promise.all([
           fetch('/api/products'),
           fetch('/api/categories'),
           fetch('/api/orders'),
           fetch('/api/users'),
           fetch('/api/impact/projects'),
+          fetch('/api/donation/projects'),
           fetch('/api/payment/config'),
           fetch('/api/impact/page_config'),
           fetch('/api/donation/page_config'),
@@ -163,6 +179,15 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           setImpactProjects(projectData.map((project: ImpactProject) => ({
             ...project,
             details: project.details || ''
+          })));
+        }
+        if (donationProjectsRes.ok) {
+          const projectData = await donationProjectsRes.json();
+          setDonationProjects(projectData.map((project: DonationProject) => ({
+            ...project,
+            description: project.description || '',
+            amount: project.amount || '',
+            amount_enabled: Boolean(project.amount_enabled)
           })));
         }
         if (paymentRes.ok) setPaymentConfig(await paymentRes.json());
@@ -291,6 +316,37 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const addDonationProject = async (project: Omit<DonationProject, 'id'>) => {
+    const res = await fetch('/api/donation/projects', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(project)
+    });
+    if (res.ok) {
+      const newProject = await res.json();
+      setDonationProjects(prev => [newProject, ...prev]);
+    }
+  };
+
+  const updateDonationProject = async (id: string, updates: Partial<DonationProject>) => {
+    const res = await fetch(`/api/donation/projects/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates)
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setDonationProjects(prev => prev.map(project => project.id === id ? updated : project));
+    }
+  };
+
+  const deleteDonationProject = async (id: string) => {
+    const res = await fetch(`/api/donation/projects/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      setDonationProjects(prev => prev.filter(project => project.id !== id));
+    }
+  };
+
   const updatePaymentConfig = async (config: PaymentConfig) => {
     const res = await fetch('/api/payment/config', {
       method: 'PUT',
@@ -353,6 +409,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       users, 
       categories, 
       impactProjects,
+      donationProjects,
       paymentConfig,
       impactPageConfig,
       donationPageConfig,
@@ -368,6 +425,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       addImpactProject,
       updateImpactProject,
       deleteImpactProject,
+      addDonationProject,
+      updateDonationProject,
+      deleteDonationProject,
       updatePaymentConfig,
       updateImpactPageConfig,
       updateDonationPageConfig,

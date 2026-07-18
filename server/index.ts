@@ -152,6 +152,31 @@ app.delete('/api/impact/projects/:id', async (req, res) => {
   res.status(204).send();
 });
 
+// --- Donation Projects Routes ---
+app.get('/api/donation/projects', async (_req, res) => {
+  const { data, error } = await supabase.from('donation_projects').select('*').order('date', { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+app.post('/api/donation/projects', async (req, res) => {
+  const { data, error } = await supabase.from('donation_projects').insert([req.body]).select();
+  if (error) return res.status(500).json({ error: error.message });
+  res.status(201).json(data[0]);
+});
+
+app.put('/api/donation/projects/:id', async (req, res) => {
+  const { data, error } = await supabase.from('donation_projects').update(req.body).eq('id', req.params.id).select();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data[0]);
+});
+
+app.delete('/api/donation/projects/:id', async (req, res) => {
+  const { error } = await supabase.from('donation_projects').delete().eq('id', req.params.id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.status(204).send();
+});
+
 // --- Impact Stats Routes ---
 app.get('/api/impact/stats', async (req, res) => {
   const { data, error } = await supabase.from('fund_stats').select('*');

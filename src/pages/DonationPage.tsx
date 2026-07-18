@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type SyntheticEvent } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ChevronLeft, ChevronRight, ExternalLink, QrCode, X } from 'lucide-react';
-import { ImpactProject, useData } from '../lib/DataContext';
+import { CalendarDays, ChevronLeft, ChevronRight, ExternalLink, QrCode, X } from 'lucide-react';
+import { DonationProject, useData } from '../lib/DataContext';
 
 const defaultDonationConfig = {
   title: 'Placeholder',
@@ -26,9 +26,19 @@ function showFallbackImage(event: SyntheticEvent<HTMLImageElement>) {
   image.classList.add('object-contain', 'p-10');
 }
 
+function formatProjectDate(value: string) {
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric'
+  });
+}
+
 export default function DonationPage() {
-  const { impactProjects, donationPageConfig } = useData();
-  const [selectedProject, setSelectedProject] = useState<ImpactProject | null>(null);
+  const { donationProjects, donationPageConfig } = useData();
+  const [selectedProject, setSelectedProject] = useState<DonationProject | null>(null);
   const galleryRef = useRef<HTMLDivElement>(null);
   const config = donationPageConfig || defaultDonationConfig;
 
@@ -90,7 +100,7 @@ export default function DonationPage() {
         </div>
 
         <div ref={galleryRef} className="flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-5 md:gap-6 md:px-8 no-scrollbar">
-          {impactProjects.length > 0 ? impactProjects.map((project) => (
+          {donationProjects.length > 0 ? donationProjects.map((project) => (
             <motion.button
               key={project.id}
               type="button"
@@ -106,8 +116,17 @@ export default function DonationPage() {
                 onError={showFallbackImage}
               />
               <div className="absolute inset-0 bg-black/25 transition-colors group-hover:bg-black/40" />
-              <div className="absolute inset-x-0 bottom-0 bg-black/65 px-5 py-4 text-white md:px-7 md:py-6">
+              <div className="absolute inset-x-0 bottom-0 bg-black/70 px-5 py-4 text-white md:px-7 md:py-6">
                 <h2 className="font-serif text-2xl font-bold md:text-3xl">{project.title}</h2>
+                <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-white/85">
+                  <span className="inline-flex items-center gap-1.5">
+                    <CalendarDays size={15} />
+                    {formatProjectDate(project.date)}
+                  </span>
+                  {project.amount_enabled && project.amount && (
+                    <span className="font-bold text-white">{project.amount}</span>
+                  )}
+                </div>
               </div>
             </motion.button>
           )) : (
@@ -191,8 +210,17 @@ export default function DonationPage() {
                 <h2 id="donation-project-title" className="font-serif text-3xl font-bold text-on-surface md:text-4xl">
                   {selectedProject.title}
                 </h2>
+                <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-on-surface-variant">
+                  <span className="inline-flex items-center gap-2">
+                    <CalendarDays size={17} />
+                    {formatProjectDate(selectedProject.date)}
+                  </span>
+                  {selectedProject.amount_enabled && selectedProject.amount && (
+                    <span className="font-bold text-primary">{selectedProject.amount}</span>
+                  )}
+                </div>
                 <div className="mt-4 max-h-[24vh] overflow-y-auto pr-3 text-sm leading-7 text-on-surface-variant md:text-base">
-                  <p className="whitespace-pre-wrap">{selectedProject.details || 'Placeholder'}</p>
+                  <p className="whitespace-pre-wrap">{selectedProject.description || 'Placeholder'}</p>
                 </div>
               </div>
             </motion.section>

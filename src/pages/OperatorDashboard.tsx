@@ -57,13 +57,26 @@ function loadImageFile(file: File | undefined, onLoad: (dataUrl: string) => void
   reader.readAsDataURL(file);
 }
 
+function getTodayInputValue() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export default function OperatorDashboard() {
-  const { products, orders, users, categories, impactProjects, paymentConfig, impactPageConfig, donationPageConfig, marketPageConfig, footerPageConfig, addProduct, updateProduct, deleteProduct, updateOrder, addCategory, deleteCategory, addImpactProject, updateImpactProject, deleteImpactProject, updatePaymentConfig, updateImpactPageConfig, updateDonationPageConfig, updateMarketPageConfig, updateFooterPageConfig } = useData();
+  const {
+    products, orders, users, categories, impactProjects, donationProjects, paymentConfig,
+    impactPageConfig, donationPageConfig, marketPageConfig, footerPageConfig,
+    addProduct, updateProduct, deleteProduct, updateOrder, addCategory, deleteCategory,
+    addImpactProject, updateImpactProject, deleteImpactProject,
+    addDonationProject, updateDonationProject, deleteDonationProject,
+    updatePaymentConfig, updateImpactPageConfig, updateDonationPageConfig,
+    updateMarketPageConfig, updateFooterPageConfig
+  } = useData();
   const { adminUser, adminPass, updateAdminCredentials } = useAuth();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
   const [isCategoriesModalOpen, setIsCategoriesModalOpen] = useState(false);
   const [isImpactModalOpen, setIsImpactModalOpen] = useState(false);
+  const [activeManagementTab, setActiveManagementTab] = useState<'impact' | 'donation'>('impact');
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isPageConfigModalOpen, setIsPageConfigModalOpen] = useState(false);
   const [activeConfigTab, setActiveConfigTab] = useState<'main' | 'impact' | 'donation' | 'footer'>('main');
@@ -225,6 +238,23 @@ export default function OperatorDashboard() {
     image: '',
     details: ''
   });
+  const [newDonationProject, setNewDonationProject] = useState({
+    title: '',
+    date: getTodayInputValue(),
+    image: 'https://images.unsplash.com/photo-1469571486292-0ba58a3f068b?auto=format&fit=crop&q=80&w=1000',
+    description: '',
+    amount: '',
+    amount_enabled: false
+  });
+  const [editingDonationId, setEditingDonationId] = useState<string | null>(null);
+  const [editDonationForm, setEditDonationForm] = useState({
+    title: '',
+    date: '',
+    image: '',
+    description: '',
+    amount: '',
+    amount_enabled: false
+  });
 
   const [newCategoryName, setNewCategoryName] = useState('');
 
@@ -337,6 +367,33 @@ export default function OperatorDashboard() {
     deleteImpactProject(id);
     setConfirmDeleteId(null);
     if (editingImpactId === id) setEditingImpactId(null);
+  };
+
+  const handleDonationSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    addDonationProject(newDonationProject);
+    setNewDonationProject({
+      title: '',
+      date: getTodayInputValue(),
+      image: 'https://images.unsplash.com/photo-1469571486292-0ba58a3f068b?auto=format&fit=crop&q=80&w=1000',
+      description: '',
+      amount: '',
+      amount_enabled: false
+    });
+  };
+
+  const handleUpdateDonationSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingDonationId) {
+      updateDonationProject(editingDonationId, editDonationForm);
+      setEditingDonationId(null);
+    }
+  };
+
+  const handleDeleteDonation = (id: string) => {
+    deleteDonationProject(id);
+    setConfirmDeleteId(null);
+    if (editingDonationId === id) setEditingDonationId(null);
   };
 
   const handlePaymentSubmit = (e: React.FormEvent) => {
@@ -1154,20 +1211,37 @@ export default function OperatorDashboard() {
         )}
       </AnimatePresence>
 
-      {/* Impact / Donation Modal */}
+      {/* Impact and Donation Management Modal */}
       <AnimatePresence>
         {isImpactModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsImpactModalOpen(false)} className="absolute inset-0 bg-on-surface/40 backdrop-blur-sm" />
             <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }} className="relative w-full max-w-4xl bg-surface rounded-[3rem] shadow-2xl overflow-hidden border border-outline-variant/20">
-              <div className="p-8 border-b border-outline-variant/10 flex justify-between items-center text-tertiary">
-                <h2 className="text-2xl font-serif font-black italic">Manage Impact / Donation</h2>
+              <div className="p-6 md:p-8 border-b border-outline-variant/10 flex justify-between items-center text-tertiary">
+                <h2 className="text-xl md:text-2xl font-serif font-black italic">Impact &amp; Donation Management</h2>
                 <button onClick={() => setIsImpactModalOpen(false)} className="p-2 hover:bg-surface-container-high rounded-full transition-colors"><X /></button>
               </div>
-              <div className="p-8 max-h-[70vh] overflow-y-auto no-scrollbar space-y-6">
-                {/* Add New Impact / Donation Item */}
+              <div className="flex border-b border-outline-variant/10 px-6 md:px-8">
+                <button
+                  type="button"
+                  onClick={() => setActiveManagementTab('impact')}
+                  className={`min-h-12 flex-1 border-b-2 px-4 text-sm font-bold transition-colors ${activeManagementTab === 'impact' ? 'border-tertiary text-tertiary' : 'border-transparent text-on-surface-variant hover:text-on-surface'}`}
+                >
+                  Impact
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveManagementTab('donation')}
+                  className={`min-h-12 flex-1 border-b-2 px-4 text-sm font-bold transition-colors ${activeManagementTab === 'donation' ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant hover:text-on-surface'}`}
+                >
+                  Donation
+                </button>
+              </div>
+              {activeManagementTab === 'impact' && (
+              <div className="p-5 md:p-8 max-h-[70vh] overflow-y-auto no-scrollbar space-y-6">
+                {/* Add New Impact Item */}
                 <form onSubmit={handleImpactSubmit} className="bg-surface-container-lowest p-6 rounded-[2rem] border border-outline-variant/10 shadow-sm space-y-4">
-                  <h3 className="font-bold text-lg font-serif">Add New Item</h3>
+                  <h3 className="font-bold text-lg font-serif">Add Impact Project</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <input required className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={newImpactProject.title} onChange={e => setNewImpactProject({...newImpactProject, title: e.target.value})} placeholder="Project Title" />
                     <input required className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={newImpactProject.amount} onChange={e => setNewImpactProject({...newImpactProject, amount: e.target.value})} placeholder="Amount (e.g. $1.2k)" />
@@ -1186,7 +1260,7 @@ export default function OperatorDashboard() {
                     Upload Photo
                     <input type="file" accept="image/*" className="sr-only" onChange={e => loadImageFile(e.target.files?.[0], image => setNewImpactProject({...newImpactProject, image}))} />
                   </label>
-                  <textarea required className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif min-h-[140px]" value={newImpactProject.details} onChange={e => setNewImpactProject({...newImpactProject, details: e.target.value})} placeholder="Detailed project or donation text" />
+                  <textarea required className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif min-h-[140px]" value={newImpactProject.details} onChange={e => setNewImpactProject({...newImpactProject, details: e.target.value})} placeholder="Detailed impact project text" />
                   <button type="submit" className="w-full bg-tertiary text-on-tertiary py-3 rounded-xl font-bold shadow-lg hover:scale-[0.98] transition-all">Create Project</button>
                 </form>
 
@@ -1215,7 +1289,7 @@ export default function OperatorDashboard() {
                           Upload Photo
                           <input type="file" accept="image/*" className="sr-only" onChange={e => loadImageFile(e.target.files?.[0], image => setEditImpactForm({...editImpactForm, image}))} />
                         </label>
-                        <textarea required className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif min-h-[140px]" value={editImpactForm.details} onChange={e => setEditImpactForm({...editImpactForm, details: e.target.value})} placeholder="Detailed project or donation text" />
+                        <textarea required className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif min-h-[140px]" value={editImpactForm.details} onChange={e => setEditImpactForm({...editImpactForm, details: e.target.value})} placeholder="Detailed impact project text" />
                         <div className="flex gap-4 pt-2">
                           <button type="submit" className="flex-1 bg-tertiary text-on-tertiary py-3 rounded-xl font-bold shadow-lg hover:scale-95 transition-all">Save</button>
                           <button type="button" onClick={() => setEditingImpactId(null)} className="flex-1 bg-surface-container-high py-3 rounded-xl font-bold hover:scale-95 transition-all">Cancel</button>
@@ -1264,6 +1338,125 @@ export default function OperatorDashboard() {
                   </div>
                 ))}
               </div>
+              )}
+
+              {activeManagementTab === 'donation' && (
+                <div className="p-5 md:p-8 max-h-[70vh] overflow-y-auto no-scrollbar space-y-6">
+                  <form onSubmit={handleDonationSubmit} className="space-y-4 rounded-[2rem] border border-outline-variant/10 bg-surface-container-lowest p-5 md:p-6 shadow-sm">
+                    <h3 className="font-serif text-lg font-bold">Add Donation Project</h3>
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <input required className="w-full rounded-xl border-none bg-surface-container-low px-4 py-3 text-sm font-serif" value={newDonationProject.title} onChange={e => setNewDonationProject({...newDonationProject, title: e.target.value})} placeholder="Project Title" />
+                      <input required type="date" aria-label="Project date" className="w-full rounded-xl border-none bg-surface-container-low px-4 py-3 text-sm font-serif" value={newDonationProject.date} onChange={e => setNewDonationProject({...newDonationProject, date: e.target.value})} />
+                    </div>
+                    <input required className="w-full rounded-xl border-none bg-surface-container-low px-4 py-3 text-sm font-serif" value={newDonationProject.image} onChange={e => setNewDonationProject({...newDonationProject, image: e.target.value})} placeholder="Image URL" />
+                    <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-outline-variant/20 bg-surface-container-high px-4 py-3 text-sm font-bold text-primary hover:bg-surface-container-highest">
+                      <ImageIcon size={18} />
+                      Upload Photo
+                      <input type="file" accept="image/*" className="sr-only" onChange={e => loadImageFile(e.target.files?.[0], image => setNewDonationProject({...newDonationProject, image}))} />
+                    </label>
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-[auto_1fr] md:items-center">
+                      <button
+                        type="button"
+                        aria-pressed={newDonationProject.amount_enabled}
+                        onClick={() => setNewDonationProject({...newDonationProject, amount_enabled: !newDonationProject.amount_enabled})}
+                        className={`flex min-h-12 items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold transition-colors ${newDonationProject.amount_enabled ? 'bg-primary text-on-primary' : 'bg-surface-container-high text-on-surface-variant'}`}
+                      >
+                        {newDonationProject.amount_enabled ? <Eye size={18} /> : <EyeOff size={18} />}
+                        Amount {newDonationProject.amount_enabled ? 'Enabled' : 'Disabled'}
+                      </button>
+                      <input disabled={!newDonationProject.amount_enabled} className="w-full rounded-xl border-none bg-surface-container-low px-4 py-3 text-sm font-serif disabled:cursor-not-allowed disabled:opacity-45" value={newDonationProject.amount} onChange={e => setNewDonationProject({...newDonationProject, amount: e.target.value})} placeholder="Amount (optional)" />
+                    </div>
+                    <textarea required className="min-h-[150px] w-full rounded-xl border-none bg-surface-container-low px-4 py-3 text-sm font-serif" value={newDonationProject.description} onChange={e => setNewDonationProject({...newDonationProject, description: e.target.value})} placeholder="Donation project description" />
+                    <button type="submit" className="w-full rounded-xl bg-primary py-3 font-bold text-on-primary shadow-lg transition-all hover:scale-[0.98]">Create Donation Project</button>
+                  </form>
+
+                  <hr className="border-outline-variant/10" />
+
+                  {donationProjects.length === 0 && (
+                    <div className="rounded-2xl border border-dashed border-outline-variant/30 px-6 py-10 text-center text-sm text-on-surface-variant">
+                      No donation projects yet.
+                    </div>
+                  )}
+
+                  {donationProjects.map(project => (
+                    <div key={project.id} className="rounded-[2rem] border border-outline-variant/10 bg-surface-container-lowest p-5 md:p-6 shadow-sm">
+                      {editingDonationId === project.id ? (
+                        <form onSubmit={handleUpdateDonationSubmit} className="space-y-4">
+                          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <input required className="w-full rounded-xl border-none bg-surface-container-low px-4 py-3 text-sm font-serif" value={editDonationForm.title} onChange={e => setEditDonationForm({...editDonationForm, title: e.target.value})} placeholder="Project Title" />
+                            <input required type="date" aria-label="Project date" className="w-full rounded-xl border-none bg-surface-container-low px-4 py-3 text-sm font-serif" value={editDonationForm.date} onChange={e => setEditDonationForm({...editDonationForm, date: e.target.value})} />
+                          </div>
+                          <input required className="w-full rounded-xl border-none bg-surface-container-low px-4 py-3 text-sm font-serif" value={editDonationForm.image} onChange={e => setEditDonationForm({...editDonationForm, image: e.target.value})} placeholder="Image URL" />
+                          <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-outline-variant/20 bg-surface-container-high px-4 py-3 text-sm font-bold text-primary hover:bg-surface-container-highest">
+                            <ImageIcon size={18} />
+                            Upload Photo
+                            <input type="file" accept="image/*" className="sr-only" onChange={e => loadImageFile(e.target.files?.[0], image => setEditDonationForm({...editDonationForm, image}))} />
+                          </label>
+                          <div className="grid grid-cols-1 gap-3 md:grid-cols-[auto_1fr] md:items-center">
+                            <button
+                              type="button"
+                              aria-pressed={editDonationForm.amount_enabled}
+                              onClick={() => setEditDonationForm({...editDonationForm, amount_enabled: !editDonationForm.amount_enabled})}
+                              className={`flex min-h-12 items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold transition-colors ${editDonationForm.amount_enabled ? 'bg-primary text-on-primary' : 'bg-surface-container-high text-on-surface-variant'}`}
+                            >
+                              {editDonationForm.amount_enabled ? <Eye size={18} /> : <EyeOff size={18} />}
+                              Amount {editDonationForm.amount_enabled ? 'Enabled' : 'Disabled'}
+                            </button>
+                            <input disabled={!editDonationForm.amount_enabled} className="w-full rounded-xl border-none bg-surface-container-low px-4 py-3 text-sm font-serif disabled:cursor-not-allowed disabled:opacity-45" value={editDonationForm.amount} onChange={e => setEditDonationForm({...editDonationForm, amount: e.target.value})} placeholder="Amount (optional)" />
+                          </div>
+                          <textarea required className="min-h-[150px] w-full rounded-xl border-none bg-surface-container-low px-4 py-3 text-sm font-serif" value={editDonationForm.description} onChange={e => setEditDonationForm({...editDonationForm, description: e.target.value})} placeholder="Donation project description" />
+                          <div className="flex gap-3 pt-2">
+                            <button type="submit" className="flex-1 rounded-xl bg-primary py-3 font-bold text-on-primary shadow-lg transition-all hover:scale-95">Save</button>
+                            <button type="button" onClick={() => setEditingDonationId(null)} className="flex-1 rounded-xl bg-surface-container-high py-3 font-bold transition-all hover:scale-95">Cancel</button>
+                          </div>
+                        </form>
+                      ) : (
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                          <img src={project.image} alt={project.title} className="h-36 w-full rounded-2xl object-cover shadow-md sm:h-24 sm:w-24" />
+                          <div className="min-w-0 flex-grow">
+                            <h4 className="break-words text-lg font-bold md:text-xl">{project.title}</h4>
+                            <p className="mt-1 text-sm text-on-surface-variant">{formatDateOnly(project.date)}</p>
+                            <p className="mt-1 text-sm font-bold text-primary">{project.amount_enabled && project.amount ? project.amount : 'Amount hidden'}</p>
+                            <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-on-surface-variant">{project.description}</p>
+                          </div>
+                          <div className="flex shrink-0 gap-2 sm:flex-col">
+                            {confirmDeleteId === project.id ? (
+                              <>
+                                <button onClick={() => handleDeleteDonation(project.id)} className="px-4 py-2 bg-error text-on-error rounded-xl text-xs font-bold">Confirm Delete</button>
+                                <button onClick={() => setConfirmDeleteId(null)} className="px-4 py-2 bg-surface-container-high rounded-xl text-xs font-bold">Cancel</button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  type="button"
+                                  aria-label={`Edit ${project.title}`}
+                                  onClick={() => {
+                                    setEditingDonationId(project.id);
+                                    setEditDonationForm({
+                                      title: project.title,
+                                      date: project.date,
+                                      image: project.image,
+                                      description: project.description,
+                                      amount: project.amount,
+                                      amount_enabled: project.amount_enabled
+                                    });
+                                  }}
+                                  className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary hover:bg-primary/20"
+                                >
+                                  <Edit2 size={21} />
+                                </button>
+                                <button type="button" aria-label={`Delete ${project.title}`} onClick={() => setConfirmDeleteId(project.id)} className="flex h-12 w-12 items-center justify-center rounded-xl bg-error/10 text-error hover:bg-error/20">
+                                  <Trash2 size={21} />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </motion.div>
           </div>
         )}
