@@ -26,6 +26,7 @@ alter table public.products add column if not exists availability text not null 
 -- Orders Table
 create table public.orders (
   id uuid default uuid_generate_v4() primary key,
+  user_id uuid references auth.users(id) on delete set null,
   "customerName" text not null,
   date text not null,
   total numeric not null,
@@ -33,6 +34,8 @@ create table public.orders (
   status text not null default 'Pending',
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+create index orders_user_id_created_at_idx on public.orders (user_id, created_at desc);
 
 -- Users Table
 create table public.users (

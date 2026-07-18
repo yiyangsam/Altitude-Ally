@@ -82,6 +82,16 @@ app.put('/api/orders/:id', async (req, res) => {
   res.json(data[0]);
 });
 
+app.get('/api/users/:id/orders', async (req, res) => {
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('user_id', req.params.id)
+    .order('created_at', { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
 // --- Categories Routes ---
 app.get('/api/categories', async (req, res) => {
   const { data, error } = await supabase.from('categories').select('*');

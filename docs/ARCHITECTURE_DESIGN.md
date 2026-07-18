@@ -3,7 +3,7 @@
 | Document field | Value |
 | --- | --- |
 | System | Altitude Ally Web Platform |
-| Document version | 1.0 |
+| Document version | 1.1 |
 | Architecture status | Current-state baseline with recommended production target |
 | Baseline date | 18 July 2026 |
 | Source branch | `V2` |
@@ -172,8 +172,7 @@ Vercel rewrites `/api/*` to the serverless entry point and rewrites every other 
 - Payment is manual. The system displays a QR code but does not receive bank or payment-gateway confirmation.
 - Product, impact, donation, and QR images are text values in PostgreSQL. Uploaded files are converted to data URLs, increasing row and API payload size.
 - Orders store item descriptions in JSON rather than normalized order and order-item records.
-- Customer account order history is only added to in-memory profile state after checkout and is not reloaded from the `orders` table after a refresh or new session.
-- The database schema does not currently establish a user foreign key on orders or a category foreign key on products.
+- The database schema does not currently establish a category foreign key on products.
 - No cache, queue, background worker, search service, or analytics warehouse is configured.
 - Node.js and package-manager runtime versions are not pinned in the repository.
 
@@ -310,9 +309,10 @@ sequenceDiagram
     Customer->>SPA: Confirm delivery details
     SPA->>API: PUT /api/users/:id when profile is edited
     Customer->>SPA: Confirm order, await payment
-    SPA->>API: POST /api/orders
-    API->>DB: Insert order with Pending status
+    SPA->>API: POST /api/orders with authenticated user ID
+    API->>DB: Insert linked order with Pending status
     DB-->>SPA: Created order
+    SPA->>SPA: Add the stored order to account history
     SPA-->>Customer: Display QR code and bank details
     Customer->>SPA: Confirm payment
     SPA->>SPA: Clear local cart and show Order Registered
@@ -334,7 +334,7 @@ All routes are implemented in `server/index.ts` and are exposed beneath `/api`.
 | Resource | Read routes | Write routes | Current consumer |
 | --- | --- | --- | --- |
 | Products | `GET /products` | `POST /products`, `PUT /products/:id`, `DELETE /products/:id` | Market and operator inventory. |
-| Orders | `GET /orders` | `POST /orders`, `PUT /orders/:id` | Checkout and operator tracking. |
+| Orders | `GET /orders`, `GET /users/:id/orders` | `POST /orders`, `PUT /orders/:id` | Checkout, persistent customer history, and operator tracking. |
 | Categories | `GET /categories` | `POST /categories`, `DELETE /categories/:name` | Market filters and operator management. |
 | Users | `GET /users`, `GET /users/:id` | `POST /users`, `PUT /users/:id` | Customer profiles and operator member list. |
 | Impact projects | `GET /impact/projects` | `POST`, `PUT /impact/projects/:id`, `DELETE /impact/projects/:id` | Impact page and operator management. |
@@ -355,7 +355,7 @@ Routes for `fund_stats` and `impact_metrics` remain in the API, but the current 
 | Customer identity and password | Supabase Auth | Session is restored and refreshed by the Supabase browser client. |
 | Customer profile | `public.users` | Loaded after authentication and updated through the API. |
 | Products and categories | PostgreSQL | Loaded into `DataContext` and updated optimistically after successful API responses. |
-| Orders | PostgreSQL | The operator list is database-backed. Customer account history is currently session-only because it is not queried back from the orders table. |
+| Orders | PostgreSQL | Created with the authenticated user's ID, displayed immediately, and reloaded into customer account history after refresh or later login. |
 | Cart | Browser `localStorage` | Survives reloads on the same browser only. |
 | Checkout step | React component memory | Resets when the page is reloaded. |
 | Page content and payment instructions | Singleton PostgreSQL configuration rows | Loaded by `DataContext` and edited by the operator. |
@@ -463,7 +463,7 @@ The database is PostgreSQL hosted by Supabase. UUID primary keys use the `uuid-o
 | `public.users` | `id`, `name`, `email`, `phone`, `address`, `role`, `joinedDate` | Customer profile linked one-to-one to `auth.users`. |
 | `products` | `name`, `price`, `unit`, `category`, `description`, `details`, `variations`, `portions`, `availability`, `image` | Product catalog and selectable options. |
 | `categories` | `name` | Unique market filter values managed by operators. |
-| `orders` | `customerName`, `date`, `total`, `items`, `status` | Pending and fulfilled customer orders. Items are stored as a JSON array of display strings. |
+| `orders` | `user_id`, `customerName`, `date`, `total`, `items`, `status` | Pending and fulfilled customer orders linked to authenticated customers. Items are stored as a JSON array of display strings. |
 | `impact_projects` | `title`, `amount`, `status`, `status_enabled`, `image`, `details` | Impact gallery and project detail content. |
 | `donation_projects` | `title`, `date`, `image`, `description`, `amount`, `amount_enabled` | Donation gallery and optional amount content. |
 | `payment_config` | `qr_image`, `bank_info` | Singleton QR payment instructions used during checkout. |
@@ -478,6 +478,7 @@ The database is PostgreSQL hosted by Supabase. UUID primary keys use the `uuid-o
 ```mermaid
 erDiagram
     AUTH_USERS ||--|| USERS : "has profile"
+    AUTH_USERS o|--o{ ORDERS : "places"
 
     AUTH_USERS {
         uuid id PK
@@ -506,6 +507,7 @@ erDiagram
     }
     ORDERS {
         uuid id PK
+        uuid user_id FK
         text customerName
         numeric total
         jsonb items
@@ -523,7 +525,7 @@ erDiagram
     }
 ```
 
-The only enforced foreign-key relationship in the checked-in schema is `public.users.id -> auth.users.id`, with profile deletion cascading when an Auth user is deleted. Products refer to categories by text, and orders do not contain a customer/user foreign key.
+The checked-in schema links `public.users.id -> auth.users.id` and `orders.user_id -> auth.users.id`. Profile deletion cascades when an Auth user is deleted, while historical orders keep their business record and set `user_id` to null. Products still refer to categories by text.
 
 ### 6.4 Data Design Characteristics
 
@@ -553,6 +555,7 @@ PII must not be written to public logs, client analytics, source control, or unr
 
 - `supabase/schema.sql` represents the bootstrap schema for a new project.
 - `supabase/v2-migration.sql` contains idempotent additions for the V2 product details, donation, impact showcase, market, and footer features.
+- `supabase/order-history-migration.sql` links new orders to authenticated customers and safely backfills historical orders when the saved customer name matches exactly one profile.
 - Migrations are currently SQL files and are not automatically applied by the Vercel deployment.
 
 Future schema changes should use ordered, immutable migration files applied through a controlled Supabase migration process. Deployment should verify that the database version is compatible before new application code is promoted.
@@ -677,7 +680,7 @@ Recommended layers:
 
 ### Phase 2: Improve data integrity
 
-- Add `orders.user_id`, delivery-contact snapshots, a payment state, and normalized `order_items`.
+- Add delivery-contact snapshots, a payment state, and normalized `order_items`.
 - Link products to category IDs or enforce category values through a controlled reference.
 - Add explicit database checks/enums for order and impact status.
 - Add immutable migration ordering and a repeatable deployment process.
@@ -714,7 +717,7 @@ Recommended layers:
 | API implementation | `server/index.ts` |
 | Vercel API adapter | `api/index.ts` |
 | Deployment rewrites | `vercel.json` |
-| Database bootstrap and migration | `supabase/schema.sql`, `supabase/v2-migration.sql` |
+| Database bootstrap and migrations | `supabase/schema.sql`, `supabase/v2-migration.sql`, `supabase/order-history-migration.sql` |
 
 ## 12. Review and Maintenance
 

@@ -6,7 +6,7 @@ export interface Order {
   date: string;
   total: number;
   items: string[];
-  status: 'Pending' | 'Delivered' | 'Processing';
+  status: 'Pending' | 'Delivered' | 'Processing' | 'Completed';
 }
 
 export interface User {
@@ -31,7 +31,7 @@ interface AuthContextType {
   updatePassword: (password: string) => Promise<any>;
   logout: () => Promise<void>;
   updateProfile: (data: Partial<User>) => Promise<boolean>;
-  addOrder: (order: Omit<Order, 'id' | 'date' | 'status'>) => void;
+  addOrder: (order: Order) => void;
   updateAdminCredentials: (user: string, pass: string) => void;
 }
 
@@ -62,14 +62,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     fetchAdminConfig();
   }, []);
 
+  const fetchUserOrders = async (id: string): Promise<Order[]> => {
+    try {
+      const res = await fetch(`/api/users/${id}/orders`);
+      if (!res.ok) return [];
+
+      const orders = await res.json();
+      return orders.map((order: Order) => ({
+        id: order.id,
+        date: order.date,
+        total: Number(order.total),
+        items: Array.isArray(order.items) ? order.items : [],
+        status: order.status
+      }));
+    } catch (error) {
+      console.error('Failed to fetch customer orders', error);
+      return [];
+    }
+  };
+
   const fetchProfile = async (id: string, email: string, metadata: Record<string, any> = {}) => {
     try {
       const res = await fetch(`/api/users/${id}`);
       if (res.ok) {
         const profile = await res.json();
+        const orders = await fetchUserOrders(id);
         setUser({
           ...profile,
-          orders: profile.orders || [] // Ensure orders exist or handle via db
+          orders
         });
       } else if (res.status === 404) {
         const newProfile = {
@@ -87,7 +107,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           body: JSON.stringify(newProfile)
         });
         const createdProfile = createRes.ok ? await createRes.json() : newProfile;
-        setUser({ ...createdProfile, orders: createdProfile.orders || [] });
+        const orders = await fetchUserOrders(id);
+        setUser({ ...createdProfile, orders });
       } else {
         throw new Error(`Profile request failed with status ${res.status}`);
       }
@@ -202,14 +223,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return res.ok;
   };
 
-  const addOrder = (orderData: Omit<Order, 'id' | 'date' | 'status'>) => {
-    const newOrder: Order = {
-      ...orderData,
-      id: '#' + Math.floor(10000 + Math.random() * 90000).toString(),
-      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      status: 'Pending'
-    };
-    setUser(prev => prev ? { ...prev, orders: [newOrder, ...prev.orders] } : null);
+  const addOrder = (order: Order) => {
+    setUser(prev => prev ? {
+      ...prev,
+      orders: prev.orders.some(existingOrder => existingOrder.id === order.id)
+        ? prev.orders
+        : [order, ...prev.orders]
+    } : null);
   };
 
   const updateAdminCredentials = async (newUser: string, newPass: string) => {

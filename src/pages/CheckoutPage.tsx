@@ -62,6 +62,10 @@ export default function CheckoutPage() {
 
   const handleConfirmOrder = async () => {
     if (!isConfirmed || isEditingDetails || isSubmittingOrder || isOrderSubmitted) return;
+    if (!user) {
+      setOrderError('Please wait for your account details to finish loading.');
+      return;
+    }
 
     setIsSubmittingOrder(true);
     setOrderError('');
@@ -69,15 +73,19 @@ export default function CheckoutPage() {
     const orderItems = cart.map(item => `${item.quantity}x ${item.name}`);
 
     try {
-      await addGlobalOrder({
-        customerName: user?.name || 'Anonymous',
+      const createdOrder = await addGlobalOrder({
+        user_id: user.id,
+        customerName: user.name,
         total: grandTotal,
         items: orderItems
       });
 
       addUserOrder({
-        total: grandTotal,
-        items: orderItems
+        id: createdOrder.id,
+        date: createdOrder.date,
+        total: Number(createdOrder.total),
+        items: createdOrder.items,
+        status: createdOrder.status
       });
       setIsOrderSubmitted(true);
       setCheckoutStep('payment');

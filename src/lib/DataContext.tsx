@@ -18,6 +18,7 @@ export interface Product {
 
 export interface Order {
   id: string;
+  user_id?: string;
   customerName: string;
   date: string;
   total: number;
@@ -105,7 +106,7 @@ interface DataContextType {
   addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
   updateProduct: (id: string, updates: Partial<Product>) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
-  addOrder: (order: Omit<Order, 'id' | 'date' | 'status'>) => Promise<void>;
+  addOrder: (order: Omit<Order, 'id' | 'date' | 'status'>) => Promise<Order>;
   updateOrder: (id: string, updates: Partial<Order>) => Promise<void>;
   addCategory: (category: string) => Promise<void>;
   deleteCategory: (name: string) => Promise<void>;
@@ -253,6 +254,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
     const createdOrder = await res.json();
     setOrders(prev => [createdOrder, ...prev]);
+    return createdOrder;
   };
 
   const updateOrder = async (id: string, updates: Partial<Order>) => {

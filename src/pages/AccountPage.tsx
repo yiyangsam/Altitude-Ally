@@ -265,7 +265,7 @@ export default function AccountPage() {
                       <div className="flex justify-between items-start mb-2 md:mb-4">
                         <div>
                           <h4 className="font-bold text-sm md:text-2xl mb-0.5 font-serif line-clamp-1">Harvest Order</h4>
-                          <p className="text-on-surface-variant text-[9px] md:text-sm font-medium italic">{order.date}</p>
+                          <p className="text-on-surface-variant text-[9px] md:text-sm font-medium italic">{formatAccountDate(order.date)}</p>
                         </div>
                         <div className="text-right">
                           <p className="font-black text-sm md:text-2xl text-on-surface font-serif">฿{order.total.toLocaleString()}</p>
