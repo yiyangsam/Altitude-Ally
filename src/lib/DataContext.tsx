@@ -31,6 +31,7 @@ export interface User {
   name: string;
   email: string;
   phone: string;
+  address?: string;
   role: 'Customer' | 'Volunteer' | 'Donor';
   joinedDate: string;
 }

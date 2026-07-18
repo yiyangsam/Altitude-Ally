@@ -3,7 +3,7 @@
 | Document field | Value |
 | --- | --- |
 | System | Altitude Ally Web Platform |
-| Document version | 1.1 |
+| Document version | 1.2 |
 | Architecture status | Current-state baseline with recommended production target |
 | Baseline date | 18 July 2026 |
 | Source branch | `V2` |
@@ -206,7 +206,7 @@ The repository does not currently define contractual service-level objectives or
 | Impact | Displays configurable page content, a horizontal project gallery, optional project status, project details, and a configurable full-width showcase image. |
 | Donation | Displays configurable introductory content, donation projects, optional amounts, external organization link, and direct-donation QR image. |
 | Footer content | Displays mission, privacy, terms, and contact information in on-page dialogs backed by page configuration. |
-| Operator console | Manages products, stock state, categories, orders, members, impact projects, donation projects, payment settings, page configuration, and operator credentials. |
+| Operator console | Manages products, stock state, categories, orders, members, impact projects, donation projects, payment settings, page configuration, and operator credentials. Selected orders can be exported to CSV with customer fulfillment details. |
 | Shared data access | Loads API resources into React state and applies successful CRUD responses to the UI. |
 | API application | Maps HTTP resources to Supabase database operations and provides default page configuration when selected records are absent. |
 
@@ -707,6 +707,7 @@ Recommended layers:
 | Customer authentication and profiles | `src/lib/AuthContext.tsx` |
 | Shared server data and CRUD actions | `src/lib/DataContext.tsx` |
 | Cart state | `src/lib/CartContext.tsx` |
+| Order CSV generation | `src/lib/orderExport.ts` |
 | Supabase browser client | `src/lib/supabase.ts` |
 | Market and product details | `src/pages/MarketPage.tsx` |
 | Checkout and payment confirmation | `src/pages/CheckoutPage.tsx` |

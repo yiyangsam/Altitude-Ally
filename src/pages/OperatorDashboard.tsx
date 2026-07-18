@@ -17,7 +17,8 @@ import {
   Eye,
   EyeOff,
   Copy,
-  Ban
+  Ban,
+  Download
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useState, useEffect } from 'react';
@@ -26,6 +27,7 @@ import { useData, type ProductAvailability } from '../lib/DataContext';
 import { useAuth } from '../lib/AuthContext';
 import { QrCode } from 'lucide-react';
 import { getOrderStatusClasses } from '../lib/orderStatus';
+import { buildOrdersCsv } from '../lib/orderExport';
 
 const productAvailabilityActions: {
   value: ProductAvailability;
@@ -81,6 +83,7 @@ export default function OperatorDashboard() {
   const [isPageConfigModalOpen, setIsPageConfigModalOpen] = useState(false);
   const [activeConfigTab, setActiveConfigTab] = useState<'main' | 'impact' | 'donation' | 'footer'>('main');
   const [isViewAllOrdersOpen, setIsViewAllOrdersOpen] = useState(false);
+  const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [selectedUserEmail, setSelectedUserEmail] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -332,6 +335,41 @@ export default function OperatorDashboard() {
 
     setCopiedEmail(email);
     setTimeout(() => setCopiedEmail(current => current === email ? null : current), 1800);
+  };
+
+  const closeAllOrders = () => {
+    setIsViewAllOrdersOpen(false);
+    setSelectedOrderIds([]);
+  };
+
+  const toggleOrderSelection = (orderId: string) => {
+    setSelectedOrderIds(current => current.includes(orderId)
+      ? current.filter(id => id !== orderId)
+      : [...current, orderId]
+    );
+  };
+
+  const toggleAllOrders = () => {
+    setSelectedOrderIds(current => current.length === orders.length
+      ? []
+      : orders.map(order => order.id)
+    );
+  };
+
+  const exportSelectedOrders = () => {
+    const selectedOrders = orders.filter(order => selectedOrderIds.includes(order.id));
+    if (selectedOrders.length === 0) return;
+
+    const csv = buildOrdersCsv(selectedOrders, users);
+    const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const downloadLink = document.createElement('a');
+    downloadLink.href = url;
+    downloadLink.download = `altitude-ally-orders-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    downloadLink.remove();
+    URL.revokeObjectURL(url);
   };
 
   const handleImpactSubmit = (e: React.FormEvent) => {
@@ -1057,27 +1095,58 @@ export default function OperatorDashboard() {
       <AnimatePresence>
         {isViewAllOrdersOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsViewAllOrdersOpen(false)} className="absolute inset-0 bg-on-surface/40 backdrop-blur-sm" />
-            <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }} className="relative w-full max-w-2xl bg-surface rounded-[3rem] shadow-2xl overflow-hidden border border-outline-variant/20">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={closeAllOrders} className="absolute inset-0 bg-on-surface/40 backdrop-blur-sm" />
+            <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }} className="relative w-full max-w-4xl bg-surface rounded-[3rem] shadow-2xl overflow-hidden border border-outline-variant/20">
               <div className="p-8 border-b border-outline-variant/10 flex justify-between items-center text-primary">
                 <h2 className="text-2xl font-serif font-black italic">All Historical Orders</h2>
-                <button onClick={() => setIsViewAllOrdersOpen(false)} className="p-2 hover:bg-surface-container-high rounded-full transition-colors"><X /></button>
+                <button onClick={closeAllOrders} className="p-2 hover:bg-surface-container-high rounded-full transition-colors"><X /></button>
               </div>
-              <div className="p-8 max-h-[70vh] overflow-y-auto no-scrollbar space-y-4">
-                {orders.map((order, i) => (
+              <div className="flex flex-col gap-4 border-b border-outline-variant/10 bg-surface-container-low px-6 py-4 sm:flex-row sm:items-center sm:justify-between md:px-8">
+                <label className="inline-flex min-h-11 cursor-pointer items-center gap-3 font-bold text-on-surface">
+                  <input
+                    type="checkbox"
+                    checked={orders.length > 0 && selectedOrderIds.length === orders.length}
+                    onChange={toggleAllOrders}
+                    disabled={orders.length === 0}
+                    className="h-5 w-5 accent-primary"
+                  />
+                  <span>Select all</span>
+                  <span className="text-sm font-medium text-on-surface-variant">{selectedOrderIds.length} selected</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={exportSelectedOrders}
+                  disabled={selectedOrderIds.length === 0}
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-on-primary shadow-sm transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Download size={18} />
+                  Export as CSV
+                </button>
+              </div>
+              <div className="p-5 md:p-8 max-h-[62vh] overflow-y-auto no-scrollbar space-y-4">
+                {orders.map((order) => (
                   <div 
                     key={order.id}
                     onClick={() => {
                       setSelectedOrderId(order.id);
-                      setIsViewAllOrdersOpen(false);
+                      closeAllOrders();
                     }}
-                    className="bg-surface-container-low p-5 md:p-6 rounded-2xl border border-outline-variant/30 flex flex-col sm:flex-row justify-between sm:items-center gap-3 hover:bg-surface-container-high transition-colors cursor-pointer"
+                    className="bg-surface-container-low p-5 md:p-6 rounded-2xl border border-outline-variant/30 grid grid-cols-[auto_minmax(0,1fr)] sm:grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 hover:bg-surface-container-high transition-colors cursor-pointer"
                   >
-                    <div>
+                    <input
+                      type="checkbox"
+                      checked={selectedOrderIds.includes(order.id)}
+                      onClick={event => event.stopPropagation()}
+                      onChange={() => toggleOrderSelection(order.id)}
+                      aria-label={`Select order from ${order.customerName}`}
+                      className="h-5 w-5 accent-primary"
+                    />
+                    <div className="min-w-0">
                       <p className="font-bold text-xl text-on-surface">{order.customerName}</p>
                       <p className="text-sm text-on-surface-variant italic">{formatDateOnly(order.date)}</p>
+                      <p className="mt-1 truncate text-xs text-on-surface-variant">{order.items.join(' | ')}</p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="col-span-2 flex items-center gap-2 sm:col-span-1">
                       <span className={`flex-1 px-4 py-2 rounded-lg text-sm font-black uppercase text-center border ${getOrderStatusClasses(order.status)}`}>
                         {order.status}
                       </span>
@@ -1087,6 +1156,11 @@ export default function OperatorDashboard() {
                     </div>
                   </div>
                 ))}
+                {orders.length === 0 && (
+                  <div className="rounded-2xl border border-dashed border-outline-variant/40 p-10 text-center text-on-surface-variant">
+                    No orders are available to export.
+                  </div>
+                )}
               </div>
             </motion.div>
           </div>
