@@ -83,6 +83,7 @@ app.put('/api/orders/:id', async (req, res) => {
 });
 
 app.get('/api/users/:id/orders', async (req, res) => {
+  res.set('Cache-Control', 'private, no-store');
   const { data, error } = await supabase
     .from('orders')
     .select('*')
@@ -119,6 +120,7 @@ app.get('/api/users', async (req, res) => {
 });
 
 app.get('/api/users/:id', async (req, res) => {
+  res.set('Cache-Control', 'private, no-store');
   const { data, error } = await supabase.from('users').select('*').eq('id', req.params.id).single();
   if (error?.code === 'PGRST116') return res.status(404).json({ error: 'User not found' });
   if (error) return res.status(500).json({ error: error.message });

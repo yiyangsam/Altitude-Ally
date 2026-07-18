@@ -64,7 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUserOrders = async (id: string): Promise<Order[]> => {
     try {
-      const res = await fetch(`/api/users/${id}/orders`);
+      const res = await fetch(`/api/users/${id}/orders`, { cache: 'no-store' });
       if (!res.ok) return [];
 
       const orders = await res.json();
@@ -83,7 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchProfile = async (id: string, email: string, metadata: Record<string, any> = {}) => {
     try {
-      const res = await fetch(`/api/users/${id}`);
+      const res = await fetch(`/api/users/${id}`, { cache: 'no-store' });
       if (res.ok) {
         const profile = await res.json();
         const orders = await fetchUserOrders(id);
