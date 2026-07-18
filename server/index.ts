@@ -135,7 +135,7 @@ app.get('/api/impact/projects', async (req, res) => {
 });
 
 app.post('/api/impact/projects', async (req, res) => {
-  const { data, error } = await supabase.from('impact_projects').insert([req.body]).select();
+  const { data, error } = await supabase.from('impact_projects').insert([{ ...req.body, tag: '' }]).select();
   if (error) return res.status(500).json({ error: error.message });
   res.status(201).json(data[0]);
 });
@@ -250,14 +250,10 @@ app.get('/api/impact/page_config', async (req, res) => {
   if (error || !data) {
     return res.json({
       id: 1,
-      hero_title: "$5,000 Raised for School Gardens",
-      hero_description: "Together, we've cultivated more than just produce. We've planted the seeds of nutrition and community for 800+ families.",
-      families_served: "800+",
-      transparency_stats: [
-        { label: 'Garden Infrastructure', value: 65, color: 'bg-primary' },
-        { label: 'Seed Distribution', value: 25, color: 'bg-primary-fixed-dim' },
-        { label: 'Community Workshops', value: 10, color: 'bg-tertiary-fixed-dim' }
-      ]
+      hero_title: 'Placeholder',
+      hero_description: 'Placeholder',
+      showcase_title: 'Placeholder',
+      showcase_image: ''
     });
   }
   res.json(data);

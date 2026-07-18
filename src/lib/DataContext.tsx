@@ -42,7 +42,6 @@ export interface Category {
 export interface ImpactProject {
   id: string;
   title: string;
-  tag: string;
   amount: string;
   status: 'Active' | 'Wait' | 'Done';
   image: string;
@@ -67,8 +66,8 @@ export interface PaymentConfig {
 export interface ImpactPageConfig {
   hero_title: string;
   hero_description: string;
-  families_served: string;
-  transparency_stats: { label: string; value: number; color: string }[];
+  showcase_title: string;
+  showcase_image: string;
 }
 
 export interface DonationPageConfig {

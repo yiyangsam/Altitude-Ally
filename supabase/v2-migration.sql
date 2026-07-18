@@ -9,6 +9,13 @@ alter table public.products
 alter table public.impact_projects
   add column if not exists details text not null default '';
 
+alter table public.impact_projects
+  alter column tag set default '';
+
+alter table public.impact_page_config
+  add column if not exists showcase_title text not null default 'Placeholder',
+  add column if not exists showcase_image text not null default '';
+
 create table if not exists public.donation_projects (
   id uuid default uuid_generate_v4() primary key,
   title text not null,

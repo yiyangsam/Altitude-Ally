@@ -65,7 +65,7 @@ insert into public.categories (name) values
 create table public.impact_projects (
   id uuid default uuid_generate_v4() primary key,
   title text not null,
-  tag text not null,
+  tag text not null default '',
   amount text not null,
   status text not null,
   image text not null,
@@ -113,16 +113,20 @@ create table public.impact_page_config (
   hero_title text,
   hero_description text,
   families_served text,
-  transparency_stats jsonb
+  transparency_stats jsonb,
+  showcase_title text not null default 'Placeholder',
+  showcase_image text not null default ''
 );
 
 -- Seed initial impact page config
-insert into public.impact_page_config (id, hero_title, hero_description, families_served, transparency_stats) values (
+insert into public.impact_page_config (id, hero_title, hero_description, families_served, transparency_stats, showcase_title, showcase_image) values (
   1, 
   '$5,000 Raised for School Gardens', 
   'Together, we''ve cultivated more than just produce. We''ve planted the seeds of nutrition and community for 800+ families.', 
   '800+', 
-  '[{"label":"Garden Infrastructure","value":65,"color":"bg-primary"},{"label":"Seed Distribution","value":25,"color":"bg-primary-fixed-dim"},{"label":"Community Workshops","value":10,"color":"bg-tertiary-fixed-dim"}]'::jsonb
+  '[{"label":"Garden Infrastructure","value":65,"color":"bg-primary"},{"label":"Seed Distribution","value":25,"color":"bg-primary-fixed-dim"},{"label":"Community Workshops","value":10,"color":"bg-tertiary-fixed-dim"}]'::jsonb,
+  'Placeholder',
+  ''
 );
 
 -- Donation Page Config Table

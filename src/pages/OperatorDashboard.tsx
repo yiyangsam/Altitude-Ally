@@ -97,12 +97,8 @@ export default function OperatorDashboard() {
   const [impactPageForm, setImpactPageForm] = useState({
     hero_title: '',
     hero_description: '',
-    families_served: '',
-    transparency_stats: [
-      { label: '', value: 0, color: 'bg-primary' },
-      { label: '', value: 0, color: 'bg-primary-fixed-dim' },
-      { label: '', value: 0, color: 'bg-tertiary-fixed-dim' }
-    ]
+    showcase_title: '',
+    showcase_image: ''
   });
   const [donationPageForm, setDonationPageForm] = useState({
     title: '',
@@ -137,12 +133,8 @@ export default function OperatorDashboard() {
       setImpactPageForm({
         hero_title: impactPageConfig.hero_title || '',
         hero_description: impactPageConfig.hero_description || '',
-        families_served: impactPageConfig.families_served || '',
-        transparency_stats: impactPageConfig.transparency_stats || [
-          { label: '', value: 0, color: 'bg-primary' },
-          { label: '', value: 0, color: 'bg-primary-fixed-dim' },
-          { label: '', value: 0, color: 'bg-tertiary-fixed-dim' }
-        ]
+        showcase_title: impactPageConfig.showcase_title || '',
+        showcase_image: impactPageConfig.showcase_image || ''
       });
     }
   }, [impactPageConfig]);
@@ -223,7 +215,6 @@ export default function OperatorDashboard() {
 
   const [newImpactProject, setNewImpactProject] = useState({
     title: '',
-    tag: 'Education',
     amount: '',
     status: 'Wait' as 'Active' | 'Wait' | 'Done',
     image: 'https://images.unsplash.com/photo-1542601906990-b4d3fb75bb44?auto=format&fit=crop&q=80&w=1000',
@@ -232,7 +223,6 @@ export default function OperatorDashboard() {
   const [editingImpactId, setEditingImpactId] = useState<string | null>(null);
   const [editImpactForm, setEditImpactForm] = useState({
     title: '',
-    tag: '',
     amount: '',
     status: 'Wait' as 'Active' | 'Wait' | 'Done',
     image: '',
@@ -347,7 +337,6 @@ export default function OperatorDashboard() {
     addImpactProject(newImpactProject);
     setNewImpactProject({
       title: '',
-      tag: 'Education',
       amount: '',
       status: 'Wait',
       image: 'https://images.unsplash.com/photo-1542601906990-b4d3fb75bb44?auto=format&fit=crop&q=80&w=1000',
@@ -1246,14 +1235,11 @@ export default function OperatorDashboard() {
                     <input required className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={newImpactProject.title} onChange={e => setNewImpactProject({...newImpactProject, title: e.target.value})} placeholder="Project Title" />
                     <input required className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={newImpactProject.amount} onChange={e => setNewImpactProject({...newImpactProject, amount: e.target.value})} placeholder="Amount (e.g. $1.2k)" />
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <input required className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={newImpactProject.tag} onChange={e => setNewImpactProject({...newImpactProject, tag: e.target.value})} placeholder="Tag (e.g. Education)" />
-                    <select className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={newImpactProject.status} onChange={e => setNewImpactProject({...newImpactProject, status: e.target.value as any})}>
-                      <option value="Active">Active</option>
-                      <option value="Wait">Upcoming</option>
-                      <option value="Done">Done</option>
-                    </select>
-                  </div>
+                  <select className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={newImpactProject.status} onChange={e => setNewImpactProject({...newImpactProject, status: e.target.value as any})}>
+                    <option value="Active">Active</option>
+                    <option value="Wait">Upcoming</option>
+                    <option value="Done">Done</option>
+                  </select>
                   <input required className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={newImpactProject.image} onChange={e => setNewImpactProject({...newImpactProject, image: e.target.value})} placeholder="Image URL" />
                   <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-outline-variant/20 bg-surface-container-high px-4 py-3 text-sm font-bold text-primary hover:bg-surface-container-highest">
                     <ImageIcon size={18} />
@@ -1275,14 +1261,11 @@ export default function OperatorDashboard() {
                           <input required className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={editImpactForm.title} onChange={e => setEditImpactForm({...editImpactForm, title: e.target.value})} placeholder="Project Title" />
                           <input required className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={editImpactForm.amount} onChange={e => setEditImpactForm({...editImpactForm, amount: e.target.value})} placeholder="Amount (e.g. $1.2k)" />
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <input required className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={editImpactForm.tag} onChange={e => setEditImpactForm({...editImpactForm, tag: e.target.value})} placeholder="Tag (e.g. Education)" />
-                          <select className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={editImpactForm.status} onChange={e => setEditImpactForm({...editImpactForm, status: e.target.value as any})}>
-                            <option value="Active">Active</option>
-                            <option value="Wait">Upcoming</option>
-                            <option value="Done">Done</option>
-                          </select>
-                        </div>
+                        <select className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={editImpactForm.status} onChange={e => setEditImpactForm({...editImpactForm, status: e.target.value as any})}>
+                          <option value="Active">Active</option>
+                          <option value="Wait">Upcoming</option>
+                          <option value="Done">Done</option>
+                        </select>
                         <input required className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={editImpactForm.image} onChange={e => setEditImpactForm({...editImpactForm, image: e.target.value})} placeholder="Image URL" />
                         <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-outline-variant/20 bg-surface-container-high px-4 py-3 text-sm font-bold text-primary hover:bg-surface-container-highest">
                           <ImageIcon size={18} />
@@ -1304,7 +1287,6 @@ export default function OperatorDashboard() {
                             <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-tertiary/10 text-tertiary">{p.status === 'Wait' ? 'Upcoming' : p.status}</span>
                           </div>
                           <p className="text-sm text-on-surface-variant italic mb-2">{p.amount}</p>
-                          <span className="text-xs text-on-surface-variant bg-surface px-2 py-1 rounded">{p.tag}</span>
                         </div>
                         <div className="flex flex-col gap-2">
                           {confirmDeleteId === p.id ? (
@@ -1318,7 +1300,6 @@ export default function OperatorDashboard() {
                                 setEditingImpactId(p.id); 
                                 setEditImpactForm({ 
                                   title: p.title,
-                                  tag: p.tag,
                                   amount: p.amount,
                                   status: p.status,
                                   image: p.image,
@@ -1560,37 +1541,31 @@ export default function OperatorDashboard() {
                 {activeConfigTab === 'impact' && (
                   <form onSubmit={handleImpactPageSubmit} className="space-y-6">
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-outline ml-2">Hero Title</label>
-                      <input required className="w-full px-4 py-4 bg-surface-container-low border-none rounded-2xl text-sm font-serif" value={impactPageForm.hero_title} onChange={e => setImpactPageForm({...impactPageForm, hero_title: e.target.value})} placeholder="$5,000 Raised..." />
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-outline ml-2">Page Title</label>
+                      <input required className="w-full px-4 py-4 bg-surface-container-low border-none rounded-2xl text-sm font-serif" value={impactPageForm.hero_title} onChange={e => setImpactPageForm({...impactPageForm, hero_title: e.target.value})} placeholder="Placeholder" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-outline ml-2">Hero Description</label>
-                      <textarea required className="w-full px-4 py-4 bg-surface-container-low border-none rounded-2xl text-sm font-serif min-h-[100px]" value={impactPageForm.hero_description} onChange={e => setImpactPageForm({...impactPageForm, hero_description: e.target.value})} placeholder="Together, we've cultivated..." />
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-outline ml-2">Page Subheading</label>
+                      <textarea required className="w-full px-4 py-4 bg-surface-container-low border-none rounded-2xl text-sm font-serif min-h-[100px]" value={impactPageForm.hero_description} onChange={e => setImpactPageForm({...impactPageForm, hero_description: e.target.value})} placeholder="Placeholder" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-outline ml-2">Families Served Metric</label>
-                      <input required className="w-full px-4 py-4 bg-surface-container-low border-none rounded-2xl text-sm font-serif" value={impactPageForm.families_served} onChange={e => setImpactPageForm({...impactPageForm, families_served: e.target.value})} placeholder="800+" />
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-outline ml-2">Wide Image Heading</label>
+                      <input required className="w-full px-4 py-4 bg-surface-container-low border-none rounded-2xl text-sm font-serif" value={impactPageForm.showcase_title} onChange={e => setImpactPageForm({...impactPageForm, showcase_title: e.target.value})} placeholder="Placeholder" />
                     </div>
-                    
-                    <div className="space-y-4">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-outline ml-2">Transparency Stats</label>
-                      {impactPageForm.transparency_stats.map((stat, i) => (
-                        <div key={i} className="flex gap-4 items-center">
-                          <input required className="flex-1 px-4 py-3 bg-surface-container-low border-none rounded-2xl text-sm font-serif" value={stat.label} onChange={e => {
-                            const newStats = [...impactPageForm.transparency_stats];
-                            newStats[i].label = e.target.value;
-                            setImpactPageForm({...impactPageForm, transparency_stats: newStats});
-                          }} placeholder="Label (e.g. Garden Infrastructure)" />
-                          <input required type="number" className="w-24 px-4 py-3 bg-surface-container-low border-none rounded-2xl text-sm font-serif" value={stat.value} onChange={e => {
-                            const newStats = [...impactPageForm.transparency_stats];
-                            newStats[i].value = Number(e.target.value) || 0;
-                            setImpactPageForm({...impactPageForm, transparency_stats: newStats});
-                          }} placeholder="%" />
-                        </div>
-                      ))}
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-outline ml-2">Wide Image</label>
+                      <input className="w-full px-4 py-4 bg-surface-container-low border-none rounded-2xl text-sm font-serif" value={impactPageForm.showcase_image} onChange={e => setImpactPageForm({...impactPageForm, showcase_image: e.target.value})} placeholder="Image URL" />
+                      <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-outline-variant/20 bg-surface-container-high px-4 py-3 text-sm font-bold text-primary hover:bg-surface-container-highest">
+                        <ImageIcon size={18} />
+                        Upload Wide Image
+                        <input type="file" accept="image/*" className="sr-only" onChange={e => loadImageFile(e.target.files?.[0], showcase_image => setImpactPageForm({...impactPageForm, showcase_image}))} />
+                      </label>
                     </div>
+                    {impactPageForm.showcase_image && (
+                      <img src={impactPageForm.showcase_image} alt="Impact wide image preview" className="aspect-[16/6] w-full rounded-2xl bg-surface-container-low object-cover" />
+                    )}
 
-                    <button type="submit" className="w-full bg-primary text-on-primary py-4 rounded-2xl font-bold shadow-lg hover:scale-[0.98] transition-all text-lg">Save Configuration</button>
+                    <button type="submit" className="w-full bg-primary text-on-primary py-4 rounded-2xl font-bold shadow-lg hover:scale-[0.98] transition-all text-lg">Save Impact Page</button>
                   </form>
                 )}
 
