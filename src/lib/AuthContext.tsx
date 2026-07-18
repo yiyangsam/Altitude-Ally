@@ -86,10 +86,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const res = await fetch(`/api/users/${id}`, { cache: 'no-store' });
       if (res.ok) {
         const profile = await res.json();
-        const orders = await fetchUserOrders(id);
         setUser({
           ...profile,
-          orders
+          orders: Array.isArray(profile.orders) ? profile.orders : []
         });
       } else if (res.status === 404) {
         const newProfile = {
