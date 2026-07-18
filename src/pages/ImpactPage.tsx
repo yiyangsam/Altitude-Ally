@@ -97,7 +97,7 @@ export default function ImpactPage() {
               type="button"
               whileHover={{ y: -4 }}
               onClick={() => setSelectedProject(project)}
-              className="group relative aspect-[4/3] min-w-[82vw] snap-start overflow-hidden rounded-2xl bg-surface-container-high text-left shadow-lg sm:min-w-[380px] lg:min-w-[460px]"
+              className="group relative aspect-[4/3] min-w-[74vw] snap-start overflow-hidden rounded-2xl bg-surface-container-high text-left shadow-lg sm:min-w-[330px] lg:min-w-[400px]"
             >
               <img
                 src={project.image}
@@ -111,7 +111,7 @@ export default function ImpactPage() {
                 <h2 className="font-serif text-2xl font-bold md:text-3xl">{project.title}</h2>
                 <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-sm text-white/85">
                   <span className="font-bold text-white">{project.amount}</span>
-                  <span>{getStatusLabel(project.status)}</span>
+                  {project.status_enabled && <span>{getStatusLabel(project.status)}</span>}
                 </div>
               </div>
             </motion.button>
@@ -128,12 +128,12 @@ export default function ImpactPage() {
           <h2 className="text-center font-serif text-3xl font-bold text-on-surface md:text-5xl">
             {config.showcase_title}
           </h2>
-          <div className="mt-8 aspect-[16/6] min-h-56 w-full overflow-hidden rounded-2xl border border-outline-variant/20 bg-surface-container-lowest shadow-sm md:mt-10">
+          <div className={`mt-8 w-full overflow-hidden rounded-2xl border border-outline-variant/20 bg-surface-container-lowest shadow-sm md:mt-10 ${config.showcase_image ? '' : 'aspect-[16/6] min-h-56'}`}>
             {config.showcase_image ? (
               <img
                 src={config.showcase_image}
                 alt={config.showcase_title}
-                className="h-full w-full object-cover"
+                className="block h-auto w-full"
                 onError={showFallbackImage}
               />
             ) : (
@@ -190,7 +190,7 @@ export default function ImpactPage() {
                 </h2>
                 <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-on-surface-variant">
                   <span className="font-bold text-primary">{selectedProject.amount}</span>
-                  <span>{getStatusLabel(selectedProject.status)}</span>
+                  {selectedProject.status_enabled && <span>{getStatusLabel(selectedProject.status)}</span>}
                 </div>
                 <div className="mt-4 max-h-[24vh] overflow-y-auto pr-3 text-sm leading-7 text-on-surface-variant md:text-base">
                   <p className="whitespace-pre-wrap">{selectedProject.details || 'Placeholder'}</p>

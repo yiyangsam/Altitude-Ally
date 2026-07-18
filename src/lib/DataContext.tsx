@@ -44,6 +44,7 @@ export interface ImpactProject {
   title: string;
   amount: string;
   status: 'Active' | 'Wait' | 'Done';
+  status_enabled: boolean;
   image: string;
   details: string;
 }
@@ -177,7 +178,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           const projectData = await impactRes.json();
           setImpactProjects(projectData.map((project: ImpactProject) => ({
             ...project,
-            details: project.details || ''
+            details: project.details || '',
+            status_enabled: project.status_enabled !== false
           })));
         }
         if (donationProjectsRes.ok) {

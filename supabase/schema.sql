@@ -68,6 +68,7 @@ create table public.impact_projects (
   tag text not null default '',
   amount text not null,
   status text not null,
+  status_enabled boolean not null default true,
   image text not null,
   details text not null default '',
   created_at timestamp with time zone default timezone('utc'::text, now()) not null

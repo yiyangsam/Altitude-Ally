@@ -7,7 +7,8 @@ alter table public.products
   add column if not exists availability text not null default 'visible';
 
 alter table public.impact_projects
-  add column if not exists details text not null default '';
+  add column if not exists details text not null default '',
+  add column if not exists status_enabled boolean not null default true;
 
 alter table public.impact_projects
   alter column tag set default '';

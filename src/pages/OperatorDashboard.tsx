@@ -217,6 +217,7 @@ export default function OperatorDashboard() {
     title: '',
     amount: '',
     status: 'Wait' as 'Active' | 'Wait' | 'Done',
+    status_enabled: true,
     image: 'https://images.unsplash.com/photo-1542601906990-b4d3fb75bb44?auto=format&fit=crop&q=80&w=1000',
     details: ''
   });
@@ -225,6 +226,7 @@ export default function OperatorDashboard() {
     title: '',
     amount: '',
     status: 'Wait' as 'Active' | 'Wait' | 'Done',
+    status_enabled: true,
     image: '',
     details: ''
   });
@@ -339,6 +341,7 @@ export default function OperatorDashboard() {
       title: '',
       amount: '',
       status: 'Wait',
+      status_enabled: true,
       image: 'https://images.unsplash.com/photo-1542601906990-b4d3fb75bb44?auto=format&fit=crop&q=80&w=1000',
       details: ''
     });
@@ -1235,11 +1238,22 @@ export default function OperatorDashboard() {
                     <input required className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={newImpactProject.title} onChange={e => setNewImpactProject({...newImpactProject, title: e.target.value})} placeholder="Project Title" />
                     <input required className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={newImpactProject.amount} onChange={e => setNewImpactProject({...newImpactProject, amount: e.target.value})} placeholder="Amount (e.g. $1.2k)" />
                   </div>
-                  <select className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={newImpactProject.status} onChange={e => setNewImpactProject({...newImpactProject, status: e.target.value as any})}>
-                    <option value="Active">Active</option>
-                    <option value="Wait">Upcoming</option>
-                    <option value="Done">Done</option>
-                  </select>
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-[auto_1fr] md:items-center">
+                    <button
+                      type="button"
+                      aria-pressed={newImpactProject.status_enabled}
+                      onClick={() => setNewImpactProject({...newImpactProject, status_enabled: !newImpactProject.status_enabled})}
+                      className={`flex min-h-12 items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold transition-colors ${newImpactProject.status_enabled ? 'bg-tertiary text-on-tertiary' : 'bg-surface-container-high text-on-surface-variant'}`}
+                    >
+                      {newImpactProject.status_enabled ? <Eye size={18} /> : <EyeOff size={18} />}
+                      Status {newImpactProject.status_enabled ? 'Enabled' : 'Disabled'}
+                    </button>
+                    <select disabled={!newImpactProject.status_enabled} className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif disabled:cursor-not-allowed disabled:opacity-45" value={newImpactProject.status} onChange={e => setNewImpactProject({...newImpactProject, status: e.target.value as any})}>
+                      <option value="Active">Active</option>
+                      <option value="Wait">Upcoming</option>
+                      <option value="Done">Done</option>
+                    </select>
+                  </div>
                   <input required className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={newImpactProject.image} onChange={e => setNewImpactProject({...newImpactProject, image: e.target.value})} placeholder="Image URL" />
                   <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-outline-variant/20 bg-surface-container-high px-4 py-3 text-sm font-bold text-primary hover:bg-surface-container-highest">
                     <ImageIcon size={18} />
@@ -1261,11 +1275,22 @@ export default function OperatorDashboard() {
                           <input required className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={editImpactForm.title} onChange={e => setEditImpactForm({...editImpactForm, title: e.target.value})} placeholder="Project Title" />
                           <input required className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={editImpactForm.amount} onChange={e => setEditImpactForm({...editImpactForm, amount: e.target.value})} placeholder="Amount (e.g. $1.2k)" />
                         </div>
-                        <select className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={editImpactForm.status} onChange={e => setEditImpactForm({...editImpactForm, status: e.target.value as any})}>
-                          <option value="Active">Active</option>
-                          <option value="Wait">Upcoming</option>
-                          <option value="Done">Done</option>
-                        </select>
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-[auto_1fr] md:items-center">
+                          <button
+                            type="button"
+                            aria-pressed={editImpactForm.status_enabled}
+                            onClick={() => setEditImpactForm({...editImpactForm, status_enabled: !editImpactForm.status_enabled})}
+                            className={`flex min-h-12 items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold transition-colors ${editImpactForm.status_enabled ? 'bg-tertiary text-on-tertiary' : 'bg-surface-container-high text-on-surface-variant'}`}
+                          >
+                            {editImpactForm.status_enabled ? <Eye size={18} /> : <EyeOff size={18} />}
+                            Status {editImpactForm.status_enabled ? 'Enabled' : 'Disabled'}
+                          </button>
+                          <select disabled={!editImpactForm.status_enabled} className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif disabled:cursor-not-allowed disabled:opacity-45" value={editImpactForm.status} onChange={e => setEditImpactForm({...editImpactForm, status: e.target.value as any})}>
+                            <option value="Active">Active</option>
+                            <option value="Wait">Upcoming</option>
+                            <option value="Done">Done</option>
+                          </select>
+                        </div>
                         <input required className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={editImpactForm.image} onChange={e => setEditImpactForm({...editImpactForm, image: e.target.value})} placeholder="Image URL" />
                         <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-outline-variant/20 bg-surface-container-high px-4 py-3 text-sm font-bold text-primary hover:bg-surface-container-highest">
                           <ImageIcon size={18} />
@@ -1284,7 +1309,9 @@ export default function OperatorDashboard() {
                         <div className="flex-grow">
                           <div className="flex items-center gap-2 mb-1">
                             <h4 className="font-bold text-xl">{p.title}</h4>
-                            <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-tertiary/10 text-tertiary">{p.status === 'Wait' ? 'Upcoming' : p.status}</span>
+                            <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded ${p.status_enabled ? 'bg-tertiary/10 text-tertiary' : 'bg-surface-container-high text-on-surface-variant'}`}>
+                              {p.status_enabled ? (p.status === 'Wait' ? 'Upcoming' : p.status) : 'Status hidden'}
+                            </span>
                           </div>
                           <p className="text-sm text-on-surface-variant italic mb-2">{p.amount}</p>
                         </div>
@@ -1302,6 +1329,7 @@ export default function OperatorDashboard() {
                                   title: p.title,
                                   amount: p.amount,
                                   status: p.status,
+                                  status_enabled: p.status_enabled,
                                   image: p.image,
                                   details: p.details || ''
                                 }); 
@@ -1562,7 +1590,7 @@ export default function OperatorDashboard() {
                       </label>
                     </div>
                     {impactPageForm.showcase_image && (
-                      <img src={impactPageForm.showcase_image} alt="Impact wide image preview" className="aspect-[16/6] w-full rounded-2xl bg-surface-container-low object-cover" />
+                      <img src={impactPageForm.showcase_image} alt="Impact wide image preview" className="h-auto w-full rounded-2xl bg-surface-container-low" />
                     )}
 
                     <button type="submit" className="w-full bg-primary text-on-primary py-4 rounded-2xl font-bold shadow-lg hover:scale-[0.98] transition-all text-lg">Save Impact Page</button>
