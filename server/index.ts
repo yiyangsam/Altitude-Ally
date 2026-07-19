@@ -38,6 +38,23 @@ if (!supabaseUrl || !supabaseKey) {
 
 const supabase = createClient(supabaseUrl || 'https://placeholder.supabase.co', supabaseKey || 'placeholder');
 
+// --- Authentication Routes ---
+app.get('/api/auth/user-exists', async (req, res) => {
+  const email = typeof req.query.email === 'string' ? req.query.email.trim().toLowerCase() : '';
+  res.set('Cache-Control', 'private, no-store');
+
+  if (!email) return res.status(400).json({ error: 'Email is required' });
+
+  const { data, error } = await supabase
+    .from('users')
+    .select('id')
+    .eq('email', email)
+    .limit(1);
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ exists: Array.isArray(data) && data.length > 0 });
+});
+
 // --- Products Routes ---
 app.get('/api/products', async (req, res) => {
   const { data, error } = await supabase.from('products').select('*');

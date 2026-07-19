@@ -150,8 +150,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Removed local storage watcher effects
 
   const login = async (email: string, pass: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
-    if (error) return { error };
+    const normalizedEmail = email.trim().toLowerCase();
+    const { data, error } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password: pass });
+
+    if (error) {
+      const isInvalidCredentials = error.message.toLowerCase().includes('invalid login credentials');
+
+      if (isInvalidCredentials) {
+        try {
+          const response = await fetch(`/api/auth/user-exists?email=${encodeURIComponent(normalizedEmail)}`, {
+            cache: 'no-store'
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            return { error: new Error(result.exists ? 'Wrong password.' : 'User not found.') };
+          }
+        } catch (lookupError) {
+          console.error('Failed to check whether the customer account exists', lookupError);
+        }
+      }
+
+      return { error };
+    }
+
     return { data };
   };
 

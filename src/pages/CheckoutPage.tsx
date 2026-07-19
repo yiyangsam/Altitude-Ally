@@ -378,7 +378,12 @@ export default function CheckoutPage() {
                             <CheckCircle2 className={`text-on-primary w-3.5 h-3.5 transition-transform ${isConfirmed ? 'scale-100' : 'scale-0'}`} />
                           </div>
                         </div>
-                        <span className="font-bold text-[11px] md:text-base text-on-surface italic group-hover:text-primary transition-colors">I confirm all details are accurate.</span>
+                        <span className="flex flex-col gap-1 text-on-surface group-hover:text-primary transition-colors">
+                          <span className="font-bold text-xs md:text-base italic">I confirm all details are accurate.</span>
+                          <strong className="text-[11px] md:text-sm leading-snug">
+                            (No order will be received if the contact information or address is wrong.)
+                          </strong>
+                        </span>
                       </label>
                     )}
 
