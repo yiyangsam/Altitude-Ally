@@ -25,7 +25,8 @@ export default function MarketPage() {
   const [activeCategory, setActiveCategory] = useState('All Produce');
   const [addedId, setAddedId] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [selectedOptionId, setSelectedOptionId] = useState('');
+  const [selectedVariationId, setSelectedVariationId] = useState('');
+  const [selectedPortionId, setSelectedPortionId] = useState('');
   const [draftQuantity, setDraftQuantity] = useState(0);
   const [activeHeroIndex, setActiveHeroIndex] = useState(0);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
@@ -56,18 +57,19 @@ export default function MarketPage() {
     if (addedFeedbackTimeout.current) window.clearTimeout(addedFeedbackTimeout.current);
   }, []);
 
-  const getConfiguredProductId = (product: Product, optionId?: string) =>
-    [product.id, optionId].filter(Boolean).join('-');
+  const getConfiguredProductId = (product: Product, variationId?: string, portionId?: string) =>
+    [product.id, variationId, portionId].filter(Boolean).join('-');
 
-  const handleAddToCart = (product: Product, optionId?: string) => {
-    const option = product.options?.find(productOption => productOption.id === optionId);
+  const handleAddToCart = (product: Product, variationId?: string, portionId?: string) => {
+    const variation = product.variations?.find(option => option.id === variationId);
+    const portion = product.portions?.find(option => option.id === portionId);
     const configuredProduct = {
       ...product,
-      id: getConfiguredProductId(product, optionId),
+      id: getConfiguredProductId(product, variationId, portionId),
       productId: product.id,
-      price: option?.price ?? product.price,
-      selectedVariation: option?.name,
-      selectedPortion: undefined
+      price: product.price + (variation?.price || 0) + (portion?.price || 0),
+      selectedVariation: variation?.name,
+      selectedPortion: portion?.name
     };
     addToCart(configuredProduct);
     setAddedId(configuredProduct.id);
@@ -85,10 +87,13 @@ export default function MarketPage() {
   });
 
   const openProduct = (product: Product) => {
-    const selectableOptions = product.options?.filter(option => option.availability !== 'hidden') || [];
-    const initialOption = selectableOptions.find(option => option.availability === 'visible') || selectableOptions[0];
+    const selectableVariations = product.variations?.filter(option => option.availability !== 'hidden') || [];
+    const selectablePortions = product.portions?.filter(option => option.availability !== 'hidden') || [];
+    const initialVariation = selectableVariations.find(option => option.availability === 'visible') || selectableVariations[0];
+    const initialPortion = selectablePortions.find(option => option.availability === 'visible') || selectablePortions[0];
     setSelectedProduct(product);
-    setSelectedOptionId(initialOption?.id || '');
+    setSelectedVariationId(initialVariation?.id || '');
+    setSelectedPortionId(initialPortion?.id || '');
     setIsDetailsOpen(false);
   };
 
@@ -97,12 +102,15 @@ export default function MarketPage() {
     setSelectedProduct(null);
   };
 
-  const visibleProductOptions = selectedProduct?.options?.filter(option => option.availability !== 'hidden') || [];
-  const selectedOption = visibleProductOptions.find(option => option.id === selectedOptionId);
-  const selectedPrice = selectedOption?.price ?? selectedProduct?.price ?? 0;
+  const visibleVariations = selectedProduct?.variations?.filter(option => option.availability !== 'hidden') || [];
+  const visiblePortions = selectedProduct?.portions?.filter(option => option.availability !== 'hidden') || [];
+  const selectedVariation = visibleVariations.find(option => option.id === selectedVariationId);
+  const selectedPortion = visiblePortions.find(option => option.id === selectedPortionId);
+  const selectedPrice = (selectedProduct?.price || 0) + (selectedVariation?.price || 0) + (selectedPortion?.price || 0);
   const selectionUnavailable = selectedProduct?.availability === 'out_of_stock'
-    || ((selectedProduct?.options?.length || 0) > 0 && (!selectedOption || selectedOption.availability !== 'visible'));
-  const selectedCartItemId = selectedProduct ? getConfiguredProductId(selectedProduct, selectedOptionId) : '';
+    || ((selectedProduct?.variations?.length || 0) > 0 && (!selectedVariation || selectedVariation.availability !== 'visible'))
+    || ((selectedProduct?.portions?.length || 0) > 0 && (!selectedPortion || selectedPortion.availability !== 'visible'));
+  const selectedCartItemId = selectedProduct ? getConfiguredProductId(selectedProduct, selectedVariationId, selectedPortionId) : '';
   const selectedCartItem = cart.find(item => item.id === selectedCartItemId);
   const selectedQuantity = selectedCartItem?.quantity || 0;
 
@@ -112,7 +120,7 @@ export default function MarketPage() {
 
   const addSelectedProduct = () => {
     if (!selectedProduct || selectionUnavailable) return;
-    handleAddToCart(selectedProduct, selectedOptionId);
+    handleAddToCart(selectedProduct, selectedVariationId, selectedPortionId);
   };
 
   const adjustDraftQuantity = (change: number) => {
@@ -208,10 +216,17 @@ export default function MarketPage() {
           <div className="grid grid-cols-4 md:grid-cols-8 gap-1.5 md:gap-3">
             <AnimatePresence mode="popLayout">
               {filteredProducts.map(product => {
-                const customerOptions = product.options?.filter(option => option.availability !== 'hidden') || [];
-                const displayPrice = customerOptions.length > 0 ? Math.min(...customerOptions.map(option => option.price)) : product.price;
+                const customerVariations = product.variations?.filter(option => option.availability !== 'hidden') || [];
+                const customerPortions = product.portions?.filter(option => option.availability !== 'hidden') || [];
+                const visibleVariationsForPrice = customerVariations.filter(option => option.availability === 'visible');
+                const visiblePortionsForPrice = customerPortions.filter(option => option.availability === 'visible');
+                const minimumVariationPrice = visibleVariationsForPrice.length > 0 ? Math.min(...visibleVariationsForPrice.map(option => option.price)) : 0;
+                const minimumPortionPrice = visiblePortionsForPrice.length > 0 ? Math.min(...visiblePortionsForPrice.map(option => option.price)) : 0;
+                const displayPrice = product.price + minimumVariationPrice + minimumPortionPrice;
                 const productUnavailable = product.availability === 'out_of_stock'
-                  || ((product.options?.length || 0) > 0 && !customerOptions.some(option => option.availability === 'visible'));
+                  || ((product.variations?.length || 0) > 0 && visibleVariationsForPrice.length === 0)
+                  || ((product.portions?.length || 0) > 0 && visiblePortionsForPrice.length === 0);
+                const configurationCount = Math.max(1, visibleVariationsForPrice.length) * Math.max(1, visiblePortionsForPrice.length);
                 return (
                 <motion.article
                   key={product.id}
@@ -233,7 +248,7 @@ export default function MarketPage() {
                   </div>
                   <div className="p-1.5 md:p-2">
                     <h3 className="min-h-6 md:min-h-8 text-[9px] md:text-xs font-bold font-serif leading-tight text-on-surface group-hover:text-primary transition-colors line-clamp-2">{product.name}</h3>
-                    <p className="font-bold text-[10px] md:text-xs text-primary truncate">{customerOptions.length > 1 ? 'From ' : ''}{'\u0E3F'}{displayPrice.toLocaleString()}</p>
+                    <p className="font-bold text-[10px] md:text-xs text-primary truncate">{configurationCount > 1 ? 'From ' : ''}{'\u0E3F'}{displayPrice.toLocaleString()}</p>
                     <span className="mb-1.5 block truncate text-[7px] md:text-[9px] text-on-surface-variant">/ {product.unit}</span>
                     <button
                       onClick={event => {
@@ -299,17 +314,34 @@ export default function MarketPage() {
                   </div>
 
                   <div className="space-y-6 mb-8">
-                    {visibleProductOptions.length > 0 && (
+                    {visibleVariations.length > 0 && (
                       <div>
                         <div className="flex items-center gap-2 mb-3 text-primary">
                           <SlidersHorizontal className="w-4 h-4" />
-                          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Options</span>
+                          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Variations</span>
                         </div>
                         <div className="flex flex-wrap gap-2">
-                          {visibleProductOptions.map(option => (
-                            <button key={option.id} disabled={option.availability === 'out_of_stock'} onClick={() => setSelectedOptionId(option.id)} className={`px-4 py-2 rounded-lg text-left text-xs md:text-sm font-bold transition-all ${option.availability === 'out_of_stock' ? 'bg-red-50 text-red-700 cursor-not-allowed line-through' : selectedOptionId === option.id ? 'bg-primary text-on-primary' : 'bg-surface-container-high text-on-surface hover:bg-surface-container-highest'}`}>
+                          {visibleVariations.map(option => (
+                            <button key={option.id} disabled={option.availability === 'out_of_stock'} onClick={() => setSelectedVariationId(option.id)} className={`px-4 py-2 rounded-lg text-left text-xs md:text-sm font-bold transition-all ${option.availability === 'out_of_stock' ? 'bg-red-50 text-red-700 cursor-not-allowed line-through' : selectedVariationId === option.id ? 'bg-primary text-on-primary' : 'bg-surface-container-high text-on-surface hover:bg-surface-container-highest'}`}>
                               <span className="block">{option.name}</span>
-                              <span className={`block text-[10px] ${selectedOptionId === option.id && option.availability === 'visible' ? 'text-on-primary/80' : 'opacity-70'}`}>{'\u0E3F'}{option.price.toLocaleString()}{option.availability === 'out_of_stock' ? ' - Out of stock' : ''}</span>
+                              <span className={`block text-[10px] ${selectedVariationId === option.id && option.availability === 'visible' ? 'text-on-primary/80' : 'opacity-70'}`}>+{'\u0E3F'}{option.price.toLocaleString()}{option.availability === 'out_of_stock' ? ' - Out of stock' : ''}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {visiblePortions.length > 0 && (
+                      <div>
+                        <div className="flex items-center gap-2 mb-3 text-secondary">
+                          <ShoppingCart className="w-4 h-4" />
+                          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Portions</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {visiblePortions.map(option => (
+                            <button key={option.id} disabled={option.availability === 'out_of_stock'} onClick={() => setSelectedPortionId(option.id)} className={`px-4 py-2 rounded-lg text-left text-xs md:text-sm font-bold transition-all ${option.availability === 'out_of_stock' ? 'bg-red-50 text-red-700 cursor-not-allowed line-through' : selectedPortionId === option.id ? 'bg-secondary text-on-secondary' : 'bg-surface-container-high text-on-surface hover:bg-surface-container-highest'}`}>
+                              <span className="block">{option.name}</span>
+                              <span className={`block text-[10px] ${selectedPortionId === option.id && option.availability === 'visible' ? 'text-on-secondary/80' : 'opacity-70'}`}>+{'\u0E3F'}{option.price.toLocaleString()}{option.availability === 'out_of_stock' ? ' - Out of stock' : ''}</span>
                             </button>
                           ))}
                         </div>
@@ -348,7 +380,7 @@ export default function MarketPage() {
                   ) : (
                     <motion.button key="add" initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={addSelectedProduct} disabled={selectionUnavailable} className={`w-full min-h-[60px] md:min-h-[68px] px-5 rounded-xl font-black text-base md:text-xl shadow-xl transition-all flex items-center justify-center gap-3 ${selectionUnavailable ? 'bg-red-100 text-red-700 cursor-not-allowed' : 'bg-primary text-on-primary hover:scale-[0.99] active:scale-95'}`}>
                       <ShoppingCart className="w-5 h-5" />
-                      {selectionUnavailable ? 'Out of Stock' : 'Add Selected Option'}
+                      {selectionUnavailable ? 'Out of Stock' : 'Add Selected Options'}
                     </motion.button>
                   )}
                 </AnimatePresence>

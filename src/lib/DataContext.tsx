@@ -7,6 +7,7 @@ export interface ProductOption {
   name: string;
   price: number;
   availability: ProductAvailability;
+  pricingMode?: 'additive';
 }
 
 export interface Product {
@@ -18,9 +19,8 @@ export interface Product {
   details?: string;
   category: string;
   image: string;
-  variations?: string[];
-  portions?: string[];
-  options?: ProductOption[];
+  variations?: ProductOption[];
+  portions?: ProductOption[];
   availability: ProductAvailability;
 }
 
@@ -146,37 +146,32 @@ function isStructuredProductOption(value: unknown): value is Partial<ProductOpti
   return Boolean(value && typeof value === 'object' && typeof (value as { name?: unknown }).name === 'string');
 }
 
-function normalizeProductOptions(product: Product): ProductOption[] {
-  const rawVariations = Array.isArray(product.variations) ? product.variations as unknown[] : [];
-  const structuredOptions = rawVariations.filter(isStructuredProductOption);
-
-  if (structuredOptions.length > 0) {
-    return structuredOptions.map((option, index): ProductOption => {
+function normalizeProductOptions(values: unknown, product: Product, group: 'variation' | 'portion'): ProductOption[] {
+  const rawOptions = Array.isArray(values) ? values : [];
+  return rawOptions.map((value, index): ProductOption | null => {
+    if (isStructuredProductOption(value)) {
+      const option = value;
       const availability: ProductAvailability = option.availability === 'out_of_stock' || option.availability === 'hidden'
         ? option.availability
         : 'visible';
+      const storedPrice = Number.isFinite(Number(option.price)) ? Number(option.price) : 0;
       return {
-        id: typeof option.id === 'string' && option.id ? option.id : `option-${product.id}-${index}`,
+        id: typeof option.id === 'string' && option.id ? option.id : `${group}-${product.id}-${index}`,
         name: option.name.trim(),
-        price: Number.isFinite(Number(option.price)) ? Number(option.price) : Number(product.price) || 0,
-        availability
+        price: storedPrice,
+        availability,
+        pricingMode: 'additive'
       };
-    }).filter(option => option.name.length > 0);
-  }
-
-  const variationNames = rawVariations.filter((option): option is string => typeof option === 'string' && option.trim().length > 0);
-  const portionNames = Array.isArray(product.portions)
-    ? (product.portions as unknown[]).filter((option): option is string => typeof option === 'string' && option.trim().length > 0)
-    : [];
-  const legacyCombinations = variationNames.length > 0 && portionNames.length > 0
-    ? variationNames.flatMap(variation => portionNames.map(portion => ({ id: `${variation}-${portion}`, name: `${variation} - ${portion}` })))
-    : (variationNames.length > 0 ? variationNames : portionNames).map(name => ({ id: name, name }));
-
-  return legacyCombinations.map(option => ({
-    ...option,
-    price: Number(product.price) || 0,
-    availability: 'visible' as ProductAvailability
-  }));
+    }
+    if (typeof value !== 'string' || !value.trim()) return null;
+    return {
+      id: value.trim(),
+      name: value.trim(),
+      price: 0,
+      availability: 'visible',
+      pricingMode: 'additive'
+    };
+  }).filter((option): option is ProductOption => Boolean(option?.name));
 }
 
 function normalizeProduct(product: Product): Product {
@@ -185,25 +180,14 @@ function normalizeProduct(product: Product): Product {
     price: Number(product.price) || 0,
     description: product.description || '',
     details: product.details || '',
-    variations: Array.isArray(product.variations)
-      ? (product.variations as unknown[]).filter((option): option is string => typeof option === 'string')
-      : [],
-    portions: Array.isArray(product.portions)
-      ? (product.portions as unknown[]).filter((option): option is string => typeof option === 'string')
-      : [],
-    options: normalizeProductOptions(product),
+    variations: normalizeProductOptions(product.variations, product, 'variation'),
+    portions: normalizeProductOptions(product.portions, product, 'portion'),
     availability: product.availability || 'visible'
   };
 }
 
 function serializeProduct<T extends Partial<Product>>(product: T) {
-  const { options, ...payload } = product;
-  if (!options) return payload;
-  return {
-    ...payload,
-    variations: options,
-    portions: []
-  };
+  return product;
 }
 
 export function DataProvider({ children }: { children: React.ReactNode }) {

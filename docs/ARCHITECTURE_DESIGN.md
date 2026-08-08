@@ -3,7 +3,7 @@
 | Document field | Value |
 | --- | --- |
 | System | Altitude Ally Web Platform |
-| Document version | 1.4 |
+| Document version | 1.5 |
 | Architecture status | Current-state baseline with recommended production target |
 | Baseline date | 8 August 2026 |
 | Source branch | `V2` |
@@ -30,7 +30,7 @@ The document is intended to:
 
 Altitude Ally is a responsive web platform that connects customers with products from mountain communities and communicates the organization's impact and donation work. It solves four related business problems:
 
-1. Customers need a clear mobile and desktop storefront for discovering products, selecting priced variations or portions, and placing an order.
+1. Customers need a clear mobile and desktop storefront for discovering products, selecting separately priced variations and portions, and placing an order.
 2. Registered customers need verified accounts, saved contact details, password recovery, and a consistent checkout flow.
 3. Operators need one place to manage products, categories, orders, members, payment instructions, impact projects, donation projects, and editable page content.
 4. The organization needs an automatically deployed website backed by a shared cloud database so changes are visible without manual file distribution.
@@ -198,8 +198,8 @@ The repository does not currently define contractual service-level objectives or
 | Module | Responsibilities |
 | --- | --- |
 | Application shell and navigation | Defines public and operator routes, shared header/footer, cart access, responsive navigation, and footer dialogs. |
-| Market and catalog | Loads visible products and categories, presents an operator-configurable timed photo carousel, supports search/filtering, shows short and long descriptions, selects priced variations or portions, and enforces product and option availability. |
-| Cart | Builds a unique cart-line identity from product plus the selected option, stages quantity changes until customer confirmation, calculates totals, and persists committed cart state locally. |
+| Market and catalog | Loads visible products and categories, presents an operator-configurable timed photo carousel, supports search/filtering, shows short and long descriptions, selects variations and portions in separate groups, adds their charges to the base price, and enforces availability for each group. |
+| Cart | Builds a unique cart-line identity from product plus the selected variation and portion, stages quantity changes until customer confirmation, calculates totals, and persists committed cart state locally. |
 | Customer authentication | Registers users, requests email confirmation, signs users in/out, restores Supabase sessions, resends confirmation, and handles reset/update password flows. |
 | Customer profile | Creates or loads a profile linked to `auth.users`, and edits name, phone, and address details. |
 | Checkout and orders | Presents basket, confirms delivery information, creates a pending order, displays QR payment instructions, and shows a persistent confirmation view. |
@@ -290,12 +290,13 @@ Password recovery uses `resetPasswordForEmail`, redirects the customer to `/upda
 #### Product selection and cart
 
 1. The market page excludes products with `availability = hidden` and displays the catalog in a compact responsive grid.
-2. Selecting a product opens a detailed dialog with the short description, a button for the long-description popup, and the visible product options. A product option represents either a variation or a portion.
-3. Each option has its own price and availability state. Hidden options are omitted, out-of-stock options are visible but disabled, and visible options can be selected.
-4. A cart line ID combines the product ID and selected option ID so differently configured products remain separate lines.
-5. The customer receives a temporary added-to-cart confirmation before the pinned action bar changes to minus and plus controls.
-6. Minus and plus modify a draft quantity. The committed cart changes only when the customer selects **Confirm Changes**.
-7. Committed cart state and computed totals are written to browser `localStorage`.
+2. Selecting a product opens a detailed dialog with the short description, a button for the long-description popup, and separate Variation and Portion sections.
+3. Every variation and portion has an additional price and availability state. Hidden choices are omitted, out-of-stock choices are visible but disabled, and visible choices can be selected.
+4. The displayed and saved line price equals the product base price plus the selected variation charge plus the selected portion charge.
+5. A cart line ID combines the product ID, selected variation ID, and selected portion ID so differently configured products remain separate lines.
+6. The customer receives a temporary added-to-cart confirmation before the pinned action bar changes to minus and plus controls.
+7. Minus and plus modify a draft quantity. The committed cart changes only when the customer selects **Confirm Changes**.
+8. Committed cart state and computed totals are written to browser `localStorage`.
 
 #### Checkout and manual payment
 
@@ -463,7 +464,7 @@ The database is PostgreSQL hosted by Supabase. UUID primary keys use the `uuid-o
 | --- | --- | --- |
 | `auth.users` | Supabase-managed identity fields | Source of truth for customer authentication and email confirmation. |
 | `public.users` | `id`, `name`, `email`, `phone`, `address`, `role`, `joinedDate` | Customer profile linked one-to-one to `auth.users`. |
-| `products` | `name`, `price`, `unit`, `category`, `description`, `details`, `variations`, `portions`, `availability`, `image` | Product catalog. `description` is the short text, `details` is the long text, and `variations` stores structured priced options. |
+| `products` | `name`, `price`, `unit`, `category`, `description`, `details`, `variations`, `portions`, `availability`, `image` | Product catalog. `description` is the short text, `details` is the long text, and the two JSON arrays store separately managed additive choices. |
 | `categories` | `name` | Unique market filter values managed by operators. |
 | `orders` | `user_id`, `customerName`, `date`, `total`, `items`, `status` | Pending and fulfilled customer orders linked to authenticated customers. Items are stored as a JSON array of display strings. |
 | `impact_projects` | `title`, `amount`, `status`, `status_enabled`, `image`, `details` | Impact gallery and project detail content. |
@@ -531,8 +532,9 @@ The checked-in schema links `public.users.id -> auth.users.id` and `orders.user_
 
 ### 6.4 Data Design Characteristics
 
-- `variations` is a JSON array of structured product-option objects containing `id`, `name`, `price`, and `availability`. The application treats an option as either a variation or a portion and writes an empty legacy `portions` array.
-- Existing string-based `variations` and `portions` are normalized into priced option objects in the client. When both legacy arrays exist, the client creates their selectable combinations and uses the product's default price.
+- `variations` and `portions` are separate JSON arrays of structured option objects containing `id`, `name`, additive `price`, `availability`, and `pricingMode`.
+- The final configured price is `products.price + variation.price + portion.price`. An absent group contributes zero.
+- Existing string-based variations and portions are normalized into structured options with zero additional price. Existing structured option prices are preserved and interpreted as additive values.
 - `orders.items` is JSON and optimized for simple display, not detailed fulfillment reporting or historical product snapshots.
 - Product availability is constrained to `visible`, `out_of_stock`, or `hidden` in the bootstrap schema.
 - Impact status is modeled as text in PostgreSQL and as `Active`, `Wait`, or `Done` in TypeScript.
@@ -573,7 +575,7 @@ Future schema changes should use ordered, immutable migration files applied thro
 | ADR-004 | Use Supabase for PostgreSQL and customer Auth. | Reduces infrastructure work and provides email verification, password recovery, and managed data APIs. | The system depends on Supabase availability and correct RLS/auth configuration. | Accepted |
 | ADR-005 | Use React Context for shared state. | The application is small enough to avoid a heavier state library and has clear auth, data, and cart domains. | Full-context updates and broad initial data loading will become inefficient at larger scale. | Accepted |
 | ADR-006 | Persist the cart in browser local storage. | Provides a free, simple cart that survives refresh without requiring login or a server table. | The cart is device-specific, user-editable, and unavailable across devices. | Accepted |
-| ADR-007 | Model product options and order items with JSON. | Allows operators to add one variation or portion at a time with its own price and availability without a schema migration. | Database constraints cannot validate each embedded option, and option-level reporting and referential integrity remain limited. | Accepted for current scope |
+| ADR-007 | Model variations, portions, and order items with JSON. | Keeps variations and portions separately editable while allowing each choice to have an additive price and availability without a schema migration. | Database constraints cannot validate each embedded choice, and option-level reporting and referential integrity remain limited. | Accepted for current scope |
 | ADR-008 | Store editable site copy and images in configuration tables. | Operators can change content without a code deployment. | Singleton tables and inline image data need validation, access control, and eventually object storage. | Accepted |
 | ADR-009 | Use a manual QR payment flow. | Matches the current operating process without payment-gateway fees or integration complexity. | Payment is not verified automatically and requires operator reconciliation. | Accepted for pilot; review before scale |
 | ADR-010 | Deploy the GitHub `V2` branch automatically through Vercel. | Gives the project a separate second-version history and rapid feedback after changes. | Production changes need stronger test and approval gates as usage grows. | Accepted |
