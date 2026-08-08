@@ -2,6 +2,13 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 
 export type ProductAvailability = 'visible' | 'out_of_stock' | 'hidden';
 
+export interface ProductOption {
+  id: string;
+  name: string;
+  price: number;
+  availability: ProductAvailability;
+}
+
 export interface Product {
   id: string; // Postgres UUID
   name: string;
@@ -13,6 +20,7 @@ export interface Product {
   image: string;
   variations?: string[];
   portions?: string[];
+  options?: ProductOption[];
   availability: ProductAvailability;
 }
 
@@ -134,6 +142,70 @@ interface DataContextType {
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
+function isStructuredProductOption(value: unknown): value is Partial<ProductOption> & { name: string } {
+  return Boolean(value && typeof value === 'object' && typeof (value as { name?: unknown }).name === 'string');
+}
+
+function normalizeProductOptions(product: Product): ProductOption[] {
+  const rawVariations = Array.isArray(product.variations) ? product.variations as unknown[] : [];
+  const structuredOptions = rawVariations.filter(isStructuredProductOption);
+
+  if (structuredOptions.length > 0) {
+    return structuredOptions.map((option, index): ProductOption => {
+      const availability: ProductAvailability = option.availability === 'out_of_stock' || option.availability === 'hidden'
+        ? option.availability
+        : 'visible';
+      return {
+        id: typeof option.id === 'string' && option.id ? option.id : `option-${product.id}-${index}`,
+        name: option.name.trim(),
+        price: Number.isFinite(Number(option.price)) ? Number(option.price) : Number(product.price) || 0,
+        availability
+      };
+    }).filter(option => option.name.length > 0);
+  }
+
+  const variationNames = rawVariations.filter((option): option is string => typeof option === 'string' && option.trim().length > 0);
+  const portionNames = Array.isArray(product.portions)
+    ? (product.portions as unknown[]).filter((option): option is string => typeof option === 'string' && option.trim().length > 0)
+    : [];
+  const legacyCombinations = variationNames.length > 0 && portionNames.length > 0
+    ? variationNames.flatMap(variation => portionNames.map(portion => ({ id: `${variation}-${portion}`, name: `${variation} - ${portion}` })))
+    : (variationNames.length > 0 ? variationNames : portionNames).map(name => ({ id: name, name }));
+
+  return legacyCombinations.map(option => ({
+    ...option,
+    price: Number(product.price) || 0,
+    availability: 'visible' as ProductAvailability
+  }));
+}
+
+function normalizeProduct(product: Product): Product {
+  return {
+    ...product,
+    price: Number(product.price) || 0,
+    description: product.description || '',
+    details: product.details || '',
+    variations: Array.isArray(product.variations)
+      ? (product.variations as unknown[]).filter((option): option is string => typeof option === 'string')
+      : [],
+    portions: Array.isArray(product.portions)
+      ? (product.portions as unknown[]).filter((option): option is string => typeof option === 'string')
+      : [],
+    options: normalizeProductOptions(product),
+    availability: product.availability || 'visible'
+  };
+}
+
+function serializeProduct<T extends Partial<Product>>(product: T) {
+  const { options, ...payload } = product;
+  if (!options) return payload;
+  return {
+    ...payload,
+    variations: options,
+    portions: []
+  };
+}
+
 export function DataProvider({ children }: { children: React.ReactNode }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -166,14 +238,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         ]);
         if (prodRes.ok) {
           const productData = await prodRes.json();
-          setProducts(productData.map((product: Product) => ({
-            ...product,
-            description: product.description || '',
-            details: product.details || '',
-            variations: Array.isArray(product.variations) ? product.variations : [],
-            portions: Array.isArray(product.portions) ? product.portions : [],
-            availability: product.availability || 'visible'
-          })));
+          setProducts(productData.map((product: Product) => normalizeProduct(product)));
         }
         if (catRes.ok) setCategories(await catRes.json());
         if (ordRes.ok) setOrders(await ordRes.json());
@@ -225,11 +290,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const res = await fetch('/api/products', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(product)
+      body: JSON.stringify(serializeProduct(product))
     });
     if (res.ok) {
       const newProduct = await res.json();
-      setProducts(prev => [newProduct, ...prev]);
+      setProducts(prev => [normalizeProduct(newProduct), ...prev]);
     }
   };
 
@@ -237,11 +302,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const res = await fetch(`/api/products/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updates)
+      body: JSON.stringify(serializeProduct(updates))
     });
     if (res.ok) {
       const updated = await res.json();
-      setProducts(prev => prev.map(p => p.id === id ? updated : p));
+      setProducts(prev => prev.map(p => p.id === id ? normalizeProduct(updated) : p));
     }
   };
 

@@ -25,8 +25,8 @@ export default function MarketPage() {
   const [activeCategory, setActiveCategory] = useState('All Produce');
   const [addedId, setAddedId] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [selectedVariation, setSelectedVariation] = useState('');
-  const [selectedPortion, setSelectedPortion] = useState('');
+  const [selectedOptionId, setSelectedOptionId] = useState('');
+  const [draftQuantity, setDraftQuantity] = useState(0);
   const [activeHeroIndex, setActiveHeroIndex] = useState(0);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const addedFeedbackTimeout = useRef<number | null>(null);
@@ -56,16 +56,18 @@ export default function MarketPage() {
     if (addedFeedbackTimeout.current) window.clearTimeout(addedFeedbackTimeout.current);
   }, []);
 
-  const getConfiguredProductId = (product: Product, options?: { variation?: string; portion?: string }) =>
-    [product.id, options?.variation, options?.portion].filter(Boolean).join('-');
+  const getConfiguredProductId = (product: Product, optionId?: string) =>
+    [product.id, optionId].filter(Boolean).join('-');
 
-  const handleAddToCart = (product: Product, options?: { variation?: string; portion?: string }) => {
+  const handleAddToCart = (product: Product, optionId?: string) => {
+    const option = product.options?.find(productOption => productOption.id === optionId);
     const configuredProduct = {
       ...product,
-      id: getConfiguredProductId(product, options),
+      id: getConfiguredProductId(product, optionId),
       productId: product.id,
-      selectedVariation: options?.variation,
-      selectedPortion: options?.portion
+      price: option?.price ?? product.price,
+      selectedVariation: option?.name,
+      selectedPortion: undefined
     };
     addToCart(configuredProduct);
     setAddedId(configuredProduct.id);
@@ -83,9 +85,10 @@ export default function MarketPage() {
   });
 
   const openProduct = (product: Product) => {
+    const selectableOptions = product.options?.filter(option => option.availability !== 'hidden') || [];
+    const initialOption = selectableOptions.find(option => option.availability === 'visible') || selectableOptions[0];
     setSelectedProduct(product);
-    setSelectedVariation(product.variations?.[0] || '');
-    setSelectedPortion(product.portions?.[0] || '');
+    setSelectedOptionId(initialOption?.id || '');
     setIsDetailsOpen(false);
   };
 
@@ -94,19 +97,31 @@ export default function MarketPage() {
     setSelectedProduct(null);
   };
 
-  const selectedCartItemId = selectedProduct
-    ? getConfiguredProductId(selectedProduct, { variation: selectedVariation, portion: selectedPortion })
-    : '';
+  const visibleProductOptions = selectedProduct?.options?.filter(option => option.availability !== 'hidden') || [];
+  const selectedOption = visibleProductOptions.find(option => option.id === selectedOptionId);
+  const selectedPrice = selectedOption?.price ?? selectedProduct?.price ?? 0;
+  const selectionUnavailable = selectedProduct?.availability === 'out_of_stock'
+    || ((selectedProduct?.options?.length || 0) > 0 && (!selectedOption || selectedOption.availability !== 'visible'));
+  const selectedCartItemId = selectedProduct ? getConfiguredProductId(selectedProduct, selectedOptionId) : '';
   const selectedCartItem = cart.find(item => item.id === selectedCartItemId);
   const selectedQuantity = selectedCartItem?.quantity || 0;
 
-  const changeSelectedQuantity = (change: number) => {
-    if (!selectedProduct || selectedProduct.availability === 'out_of_stock') return;
-    if (!selectedCartItem && change > 0) {
-      handleAddToCart(selectedProduct, { variation: selectedVariation, portion: selectedPortion });
-      return;
-    }
-    updateQuantity(selectedCartItemId, selectedQuantity + change);
+  useEffect(() => {
+    setDraftQuantity(selectedQuantity);
+  }, [selectedCartItemId, selectedQuantity]);
+
+  const addSelectedProduct = () => {
+    if (!selectedProduct || selectionUnavailable) return;
+    handleAddToCart(selectedProduct, selectedOptionId);
+  };
+
+  const adjustDraftQuantity = (change: number) => {
+    setDraftQuantity(current => Math.max(0, current + change));
+  };
+
+  const confirmQuantityChanges = () => {
+    if (!selectedCartItem || draftQuantity === selectedQuantity) return;
+    updateQuantity(selectedCartItemId, draftQuantity);
   };
 
   const showPreviousHero = () => {
@@ -192,7 +207,12 @@ export default function MarketPage() {
         {filteredProducts.length > 0 ? (
           <div className="grid grid-cols-4 md:grid-cols-8 gap-1.5 md:gap-3">
             <AnimatePresence mode="popLayout">
-              {filteredProducts.map(product => (
+              {filteredProducts.map(product => {
+                const customerOptions = product.options?.filter(option => option.availability !== 'hidden') || [];
+                const displayPrice = customerOptions.length > 0 ? Math.min(...customerOptions.map(option => option.price)) : product.price;
+                const productUnavailable = product.availability === 'out_of_stock'
+                  || ((product.options?.length || 0) > 0 && !customerOptions.some(option => option.availability === 'visible'));
+                return (
                 <motion.article
                   key={product.id}
                   layout
@@ -205,7 +225,7 @@ export default function MarketPage() {
                 >
                   <div className="aspect-square bg-surface-variant overflow-hidden relative">
                     <img alt={product.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" src={product.image} referrerPolicy="no-referrer" />
-                    {product.availability === 'out_of_stock' && (
+                    {productUnavailable && (
                       <span className="absolute left-1 top-1 md:left-2 md:top-2 px-1.5 py-1 rounded-md bg-red-600 text-white text-[7px] md:text-[9px] font-black uppercase shadow-lg">
                         Out of Stock
                       </span>
@@ -213,17 +233,17 @@ export default function MarketPage() {
                   </div>
                   <div className="p-1.5 md:p-2">
                     <h3 className="min-h-6 md:min-h-8 text-[9px] md:text-xs font-bold font-serif leading-tight text-on-surface group-hover:text-primary transition-colors line-clamp-2">{product.name}</h3>
-                    <p className="font-bold text-[10px] md:text-xs text-primary truncate">{'\u0E3F'}{product.price.toLocaleString()}</p>
+                    <p className="font-bold text-[10px] md:text-xs text-primary truncate">{customerOptions.length > 1 ? 'From ' : ''}{'\u0E3F'}{displayPrice.toLocaleString()}</p>
                     <span className="mb-1.5 block truncate text-[7px] md:text-[9px] text-on-surface-variant">/ {product.unit}</span>
                     <button
                       onClick={event => {
                         event.stopPropagation();
                         openProduct(product);
                       }}
-                      disabled={product.availability === 'out_of_stock'}
-                      className={`w-full min-h-7 md:min-h-8 px-1 py-1 rounded-md font-bold text-[8px] md:text-[10px] flex items-center justify-center gap-1 transition-all active:scale-95 shadow-sm ${product.availability === 'out_of_stock' ? 'bg-red-100 text-red-700 cursor-not-allowed' : 'bg-surface-container-highest text-on-surface hover:bg-primary hover:text-on-primary'}`}
+                      disabled={productUnavailable}
+                      className={`w-full min-h-7 md:min-h-8 px-1 py-1 rounded-md font-bold text-[8px] md:text-[10px] flex items-center justify-center gap-1 transition-all active:scale-95 shadow-sm ${productUnavailable ? 'bg-red-100 text-red-700 cursor-not-allowed' : 'bg-surface-container-highest text-on-surface hover:bg-primary hover:text-on-primary'}`}
                     >
-                      {product.availability === 'out_of_stock' ? 'Unavailable' : (
+                      {productUnavailable ? 'Unavailable' : (
                         <>
                           <ShoppingCart className="hidden sm:block w-3 h-3" />
                           Add
@@ -232,7 +252,8 @@ export default function MarketPage() {
                     </button>
                   </div>
                 </motion.article>
-              ))}
+                );
+              })}
             </AnimatePresence>
           </div>
         ) : (
@@ -258,7 +279,7 @@ export default function MarketPage() {
                 <X className="w-5 h-5" />
               </button>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 max-h-[92vh] md:max-h-[86vh] overflow-y-auto no-scrollbar pb-[92px] md:pb-[104px]">
+              <div className="grid grid-cols-1 md:grid-cols-2 max-h-[92vh] md:max-h-[86vh] overflow-y-auto no-scrollbar pb-[154px] md:pb-[166px]">
                 <div className="h-64 md:h-full md:min-h-[520px] bg-surface-variant">
                   <img src={selectedProduct.image} alt={selectedProduct.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                 </div>
@@ -266,7 +287,7 @@ export default function MarketPage() {
                   <div className="mb-8">
                     <p className="text-[10px] md:text-xs font-black uppercase tracking-[0.25em] text-primary mb-3">{selectedProduct.category}</p>
                     <h2 className="text-3xl md:text-5xl font-serif font-black italic text-on-surface leading-tight mb-4">{selectedProduct.name}</h2>
-                    <p className="text-2xl md:text-4xl font-black text-primary font-serif">{'\u0E3F'}{selectedProduct.price.toLocaleString()} <span className="text-sm md:text-lg text-on-surface-variant font-sans font-semibold">/ {selectedProduct.unit}</span></p>
+                    <p className="text-2xl md:text-4xl font-black text-primary font-serif">{'\u0E3F'}{selectedPrice.toLocaleString()} <span className="text-sm md:text-lg text-on-surface-variant font-sans font-semibold">/ {selectedProduct.unit}</span></p>
                   </div>
 
                   <div className="flex items-start gap-3 text-on-surface-variant leading-relaxed mb-8">
@@ -278,32 +299,17 @@ export default function MarketPage() {
                   </div>
 
                   <div className="space-y-6 mb-8">
-                    {(selectedProduct.variations?.length || 0) > 0 && (
+                    {visibleProductOptions.length > 0 && (
                       <div>
                         <div className="flex items-center gap-2 mb-3 text-primary">
                           <SlidersHorizontal className="w-4 h-4" />
-                          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Variation</span>
+                          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Options</span>
                         </div>
                         <div className="flex flex-wrap gap-2">
-                          {selectedProduct.variations?.map(variation => (
-                            <button key={variation} onClick={() => setSelectedVariation(variation)} className={`px-4 py-2 rounded-full text-xs md:text-sm font-bold transition-all ${selectedVariation === variation ? 'bg-primary text-on-primary' : 'bg-surface-container-high text-on-surface hover:bg-surface-container-highest'}`}>
-                              {variation}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {(selectedProduct.portions?.length || 0) > 0 && (
-                      <div>
-                        <div className="flex items-center gap-2 mb-3 text-secondary">
-                          <ShoppingCart className="w-4 h-4" />
-                          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Portion</span>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {selectedProduct.portions?.map(portion => (
-                            <button key={portion} onClick={() => setSelectedPortion(portion)} className={`px-4 py-2 rounded-full text-xs md:text-sm font-bold transition-all ${selectedPortion === portion ? 'bg-secondary text-white' : 'bg-surface-container-high text-on-surface hover:bg-surface-container-highest'}`}>
-                              {portion}
+                          {visibleProductOptions.map(option => (
+                            <button key={option.id} disabled={option.availability === 'out_of_stock'} onClick={() => setSelectedOptionId(option.id)} className={`px-4 py-2 rounded-lg text-left text-xs md:text-sm font-bold transition-all ${option.availability === 'out_of_stock' ? 'bg-red-50 text-red-700 cursor-not-allowed line-through' : selectedOptionId === option.id ? 'bg-primary text-on-primary' : 'bg-surface-container-high text-on-surface hover:bg-surface-container-highest'}`}>
+                              <span className="block">{option.name}</span>
+                              <span className={`block text-[10px] ${selectedOptionId === option.id && option.availability === 'visible' ? 'text-on-primary/80' : 'opacity-70'}`}>{'\u0E3F'}{option.price.toLocaleString()}{option.availability === 'out_of_stock' ? ' - Out of stock' : ''}</span>
                             </button>
                           ))}
                         </div>
@@ -321,19 +327,28 @@ export default function MarketPage() {
                       Added to cart
                     </motion.div>
                   ) : selectedQuantity > 0 ? (
-                    <motion.div key="quantity" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="w-full min-h-[60px] md:min-h-[68px] rounded-xl bg-primary text-on-primary shadow-xl grid grid-cols-[64px_1fr_64px] md:grid-cols-[76px_1fr_76px] items-stretch overflow-hidden" aria-label={`Quantity for ${selectedProduct.name}`}>
-                      <button type="button" onClick={() => changeSelectedQuantity(-1)} aria-label={`Decrease ${selectedProduct.name} quantity`} className="flex items-center justify-center border-r border-on-primary/25 hover:bg-on-primary/10 active:bg-on-primary/20 transition-colors">
-                        <Minus className="w-5 h-5 md:w-6 md:h-6" />
-                      </button>
-                      <span className="flex items-center justify-center text-xl md:text-2xl font-black" aria-live="polite">{selectedQuantity}</span>
-                      <button type="button" onClick={() => changeSelectedQuantity(1)} aria-label={`Increase ${selectedProduct.name} quantity`} className="flex items-center justify-center border-l border-on-primary/25 hover:bg-on-primary/10 active:bg-on-primary/20 transition-colors">
-                        <Plus className="w-5 h-5 md:w-6 md:h-6" />
-                      </button>
+                    <motion.div key="quantity" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-2">
+                      <div className="w-full min-h-[60px] md:min-h-[68px] rounded-xl bg-primary text-on-primary shadow-xl grid grid-cols-[64px_1fr_64px] md:grid-cols-[76px_1fr_76px] items-stretch overflow-hidden" aria-label={`Quantity for ${selectedProduct.name}`}>
+                        <button type="button" onClick={() => adjustDraftQuantity(-1)} aria-label={`Decrease ${selectedProduct.name} quantity`} className="flex items-center justify-center border-r border-on-primary/25 hover:bg-on-primary/10 active:bg-on-primary/20 transition-colors">
+                          <Minus className="w-5 h-5 md:w-6 md:h-6" />
+                        </button>
+                        <span className="flex items-center justify-center text-xl md:text-2xl font-black" aria-live="polite">{draftQuantity}</span>
+                        <button type="button" onClick={() => adjustDraftQuantity(1)} aria-label={`Increase ${selectedProduct.name} quantity`} className="flex items-center justify-center border-l border-on-primary/25 hover:bg-on-primary/10 active:bg-on-primary/20 transition-colors">
+                          <Plus className="w-5 h-5 md:w-6 md:h-6" />
+                        </button>
+                      </div>
+                      <AnimatePresence initial={false}>
+                        {draftQuantity !== selectedQuantity && (
+                          <motion.button initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} type="button" onClick={confirmQuantityChanges} className="w-full min-h-11 rounded-lg bg-secondary px-4 py-2.5 text-sm font-black text-on-secondary shadow-md hover:bg-secondary/90">
+                            Confirm Changes
+                          </motion.button>
+                        )}
+                      </AnimatePresence>
                     </motion.div>
                   ) : (
-                    <motion.button key="add" initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={() => changeSelectedQuantity(1)} disabled={selectedProduct.availability === 'out_of_stock'} className={`w-full min-h-[60px] md:min-h-[68px] px-5 rounded-xl font-black text-base md:text-xl shadow-xl transition-all flex items-center justify-center gap-3 ${selectedProduct.availability === 'out_of_stock' ? 'bg-red-100 text-red-700 cursor-not-allowed' : 'bg-primary text-on-primary hover:scale-[0.99] active:scale-95'}`}>
+                    <motion.button key="add" initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={addSelectedProduct} disabled={selectionUnavailable} className={`w-full min-h-[60px] md:min-h-[68px] px-5 rounded-xl font-black text-base md:text-xl shadow-xl transition-all flex items-center justify-center gap-3 ${selectionUnavailable ? 'bg-red-100 text-red-700 cursor-not-allowed' : 'bg-primary text-on-primary hover:scale-[0.99] active:scale-95'}`}>
                       <ShoppingCart className="w-5 h-5" />
-                      {selectedProduct.availability === 'out_of_stock' ? 'Out of Stock' : 'Add Selected Options'}
+                      {selectionUnavailable ? 'Out of Stock' : 'Add Selected Option'}
                     </motion.button>
                   )}
                 </AnimatePresence>

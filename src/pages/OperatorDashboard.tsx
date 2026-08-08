@@ -23,7 +23,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useData, type ProductAvailability } from '../lib/DataContext';
+import { useData, type ProductAvailability, type ProductOption } from '../lib/DataContext';
 import { useAuth } from '../lib/AuthContext';
 import { QrCode } from 'lucide-react';
 import { getOrderStatusClasses } from '../lib/orderStatus';
@@ -61,6 +61,13 @@ function loadImageFile(file: File | undefined, onLoad: (dataUrl: string) => void
 
 function getTodayInputValue() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function createProductOption(name: string, price: number): ProductOption {
+  const id = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : `option-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return { id, name: name.trim(), price, availability: 'visible' };
 }
 
 export default function OperatorDashboard() {
@@ -203,10 +210,10 @@ export default function OperatorDashboard() {
     details: '',
     category: categories[0]?.name || 'Uncategorized',
     image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=1000',
-    variations: '',
-    portions: '',
+    options: [] as ProductOption[],
     availability: 'visible' as ProductAvailability
   });
+  const [newOptionDraft, setNewOptionDraft] = useState({ name: '', price: '' });
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
@@ -217,9 +224,9 @@ export default function OperatorDashboard() {
     description: '',
     details: '',
     image: '',
-    variations: '',
-    portions: ''
+    options: [] as ProductOption[]
   });
+  const [editOptionDraft, setEditOptionDraft] = useState({ name: '', price: '' });
 
   const [newImpactProject, setNewImpactProject] = useState({
     title: '',
@@ -267,18 +274,46 @@ export default function OperatorDashboard() {
   const [showAdminStatus, setShowAdminStatus] = useState(false);
   const [adminError, setAdminError] = useState('');
 
-  const parseOptionList = (value: string) => value
-    .split(',')
-    .map(item => item.trim())
-    .filter(Boolean);
+  const addNewProductOption = () => {
+    const price = Number(newOptionDraft.price);
+    if (!newOptionDraft.name.trim() || !Number.isFinite(price) || price < 0) return;
+    setNewProduct(current => ({
+      ...current,
+      options: [...current.options, createProductOption(newOptionDraft.name, price)]
+    }));
+    setNewOptionDraft({ name: '', price: '' });
+  };
+
+  const removeNewProductOption = (id: string) => {
+    setNewProduct(current => ({ ...current, options: current.options.filter(option => option.id !== id) }));
+  };
+
+  const addEditProductOption = () => {
+    const price = Number(editOptionDraft.price);
+    if (!editOptionDraft.name.trim() || !Number.isFinite(price) || price < 0) return;
+    setEditForm(current => ({
+      ...current,
+      options: [...current.options, createProductOption(editOptionDraft.name, price)]
+    }));
+    setEditOptionDraft({ name: '', price: '' });
+  };
+
+  const updateEditProductOption = (id: string, updates: Partial<ProductOption>) => {
+    setEditForm(current => ({
+      ...current,
+      options: current.options.map(option => option.id === id ? { ...option, ...updates } : option)
+    }));
+  };
+
+  const removeEditProductOption = (id: string) => {
+    setEditForm(current => ({ ...current, options: current.options.filter(option => option.id !== id) }));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     addProduct({
       ...newProduct,
-      price: parseFloat(newProduct.price) || 0,
-      variations: parseOptionList(newProduct.variations),
-      portions: parseOptionList(newProduct.portions)
+      price: parseFloat(newProduct.price) || 0
     });
     setIsAddModalOpen(false);
     setNewProduct({
@@ -289,10 +324,10 @@ export default function OperatorDashboard() {
       details: '',
       category: categories[0]?.name || 'Uncategorized',
       image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=1000',
-      variations: '',
-      portions: '',
+      options: [],
       availability: 'visible'
     });
+    setNewOptionDraft({ name: '', price: '' });
   };
 
   const handleUpdateSubmit = (e: React.FormEvent) => {
@@ -306,10 +341,12 @@ export default function OperatorDashboard() {
         description: editForm.description,
         details: editForm.details,
         image: editForm.image,
-        variations: parseOptionList(editForm.variations),
-        portions: parseOptionList(editForm.portions)
+        options: editForm.options,
+        variations: [],
+        portions: []
       });
       setEditingId(null);
+      setEditOptionDraft({ name: '', price: '' });
     }
   };
 
@@ -786,7 +823,7 @@ export default function OperatorDashboard() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-outline ml-2">Market Price (฿)</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-outline ml-2">Default Price (฿)</label>
                     <div className="relative">
                       <span className="absolute left-6 top-1/2 -translate-y-1/2 text-outline/40 font-bold text-lg select-none">฿</span>
                       <input 
@@ -828,7 +865,7 @@ export default function OperatorDashboard() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-outline ml-2">Description</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-outline ml-2">Short Description</label>
                   <textarea 
                     required
                     className="block w-full px-6 py-4 bg-surface-container-low border-none rounded-2xl text-lg font-serif min-h-[100px]" 
@@ -839,7 +876,7 @@ export default function OperatorDashboard() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-outline ml-2">Full Description Popup</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-outline ml-2">Long Description</label>
                   <textarea 
                     className="block w-full px-6 py-4 bg-surface-container-low border-none rounded-2xl text-lg font-serif min-h-[120px]" 
                     placeholder="This text opens when the customer presses Details..."
@@ -848,27 +885,37 @@ export default function OperatorDashboard() {
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-outline ml-2">Variations</label>
-                    <input 
-                      className="block w-full px-6 py-4 bg-surface-container-low border-none rounded-2xl text-lg font-serif" 
-                      placeholder="Red, Green, Mixed"
-                      value={newProduct.variations}
-                      onChange={e => setNewProduct({...newProduct, variations: e.target.value})}
-                    />
-                    <p className="text-[10px] text-on-surface-variant ml-2">Separate choices with commas.</p>
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-outline ml-2">Options (Variations or Portions)</label>
+                  <div className="grid grid-cols-[minmax(0,1fr)_100px_46px] md:grid-cols-[minmax(0,1fr)_140px_52px] gap-2 items-end">
+                    <div className="space-y-1">
+                      <span className="text-[9px] font-bold text-on-surface-variant ml-2">Option name</span>
+                      <input className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={newOptionDraft.name} onChange={e => setNewOptionDraft({...newOptionDraft, name: e.target.value})} placeholder="e.g. 500g" />
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-[9px] font-bold text-on-surface-variant ml-2">Price</span>
+                      <input type="number" min="0" step="1" className="w-full px-3 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={newOptionDraft.price} onChange={e => setNewOptionDraft({...newOptionDraft, price: e.target.value})} placeholder="0" />
+                    </div>
+                    <button type="button" onClick={addNewProductOption} disabled={!newOptionDraft.name.trim() || newOptionDraft.price === ''} aria-label="Add product option" className="flex h-11 md:h-12 items-center justify-center rounded-xl bg-primary text-on-primary disabled:opacity-40 hover:bg-primary/90">
+                      <PlusCircle size={20} />
+                    </button>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-outline ml-2">Portions</label>
-                    <input 
-                      className="block w-full px-6 py-4 bg-surface-container-low border-none rounded-2xl text-lg font-serif" 
-                      placeholder="250g, 500g, 1kg"
-                      value={newProduct.portions}
-                      onChange={e => setNewProduct({...newProduct, portions: e.target.value})}
-                    />
-                    <p className="text-[10px] text-on-surface-variant ml-2">Separate choices with commas.</p>
-                  </div>
+                  {newProduct.options.length > 0 && (
+                    <div className="space-y-2">
+                      {newProduct.options.map(option => (
+                        <div key={option.id} className="flex items-center justify-between gap-3 rounded-xl bg-surface-container-low px-4 py-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-bold text-on-surface">{option.name}</p>
+                            <p className="text-xs font-bold text-primary">{'\u0E3F'}{option.price.toLocaleString()}</p>
+                          </div>
+                          <button type="button" onClick={() => removeNewProductOption(option.id)} aria-label={`Remove ${option.name}`} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-100 text-red-700 hover:bg-red-200">
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <p className="text-[10px] text-on-surface-variant ml-2">Add one option and its price at a time. Products without options use the default market price.</p>
                 </div>
 
                 <div className="space-y-2">
@@ -918,7 +965,7 @@ export default function OperatorDashboard() {
                             <input className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} placeholder="Product Name" />
                           </div>
                           <div className="space-y-1">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-outline ml-2">Price (฿)</label>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-outline ml-2">Default Price (฿)</label>
                             <input className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" type="number" value={editForm.price} onChange={e => setEditForm({...editForm, price: e.target.value})} placeholder="Price" />
                           </div>
                         </div>
@@ -939,23 +986,40 @@ export default function OperatorDashboard() {
                         </div>
 
                         <div className="space-y-1">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-outline ml-2">Description</label>
+                          <label className="text-[10px] font-black uppercase tracking-widest text-outline ml-2">Short Description</label>
                           <textarea className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif min-h-[80px]" value={editForm.description} onChange={e => setEditForm({...editForm, description: e.target.value})} placeholder="Description" />
                         </div>
 
                         <div className="space-y-1">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-outline ml-2">Full Description Popup</label>
+                          <label className="text-[10px] font-black uppercase tracking-widest text-outline ml-2">Long Description</label>
                           <textarea className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif min-h-[100px]" value={editForm.details} onChange={e => setEditForm({...editForm, details: e.target.value})} placeholder="Text shown after the customer presses Details" />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-outline ml-2">Variations</label>
-                            <input className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={editForm.variations} onChange={e => setEditForm({...editForm, variations: e.target.value})} placeholder="Red, Green, Mixed" />
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-outline ml-2">Portions</label>
-                            <input className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif" value={editForm.portions} onChange={e => setEditForm({...editForm, portions: e.target.value})} placeholder="250g, 500g, 1kg" />
+                        <div className="space-y-3">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-outline ml-2">Options (Variations or Portions)</label>
+                          {editForm.options.map(option => (
+                            <div key={option.id} className="space-y-3 rounded-xl border border-outline-variant/15 bg-surface-container-low p-3">
+                              <div className="grid grid-cols-[minmax(0,1fr)_100px_40px] gap-2">
+                                <input className="min-w-0 px-3 py-2.5 bg-surface-container-lowest border-none rounded-lg text-sm font-serif" value={option.name} onChange={e => updateEditProductOption(option.id, { name: e.target.value })} aria-label={`Option name for ${option.name}`} />
+                                <input type="number" min="0" step="1" className="w-full px-3 py-2.5 bg-surface-container-lowest border-none rounded-lg text-sm font-serif" value={option.price} onChange={e => updateEditProductOption(option.id, { price: Number(e.target.value) || 0 })} aria-label={`Price for ${option.name}`} />
+                                <button type="button" onClick={() => removeEditProductOption(option.id)} aria-label={`Delete ${option.name} option`} className="flex items-center justify-center rounded-lg bg-red-100 text-red-700 hover:bg-red-200"><Trash2 size={16} /></button>
+                              </div>
+                              <div className="grid grid-cols-3 gap-1.5">
+                                {productAvailabilityActions.map(action => {
+                                  const isActive = option.availability === action.value;
+                                  return (
+                                    <button key={action.value} type="button" aria-pressed={isActive} onClick={() => updateEditProductOption(option.id, { availability: action.value })} className={`min-h-9 rounded-lg px-1.5 py-2 text-[9px] font-black leading-tight transition-all ${action.classes} ${isActive ? 'ring-2 ring-on-surface/25 ring-offset-1 ring-offset-surface-container-low' : 'opacity-65 hover:opacity-100'}`}>
+                                      {action.value === 'visible' ? 'Shown' : action.value === 'out_of_stock' ? 'Out of Stock' : 'Hidden'}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ))}
+                          <div className="grid grid-cols-[minmax(0,1fr)_100px_42px] gap-2 items-end">
+                            <input className="min-w-0 px-3 py-2.5 bg-surface-container-low border-none rounded-lg text-sm font-serif" value={editOptionDraft.name} onChange={e => setEditOptionDraft({...editOptionDraft, name: e.target.value})} placeholder="New option" />
+                            <input type="number" min="0" step="1" className="w-full px-3 py-2.5 bg-surface-container-low border-none rounded-lg text-sm font-serif" value={editOptionDraft.price} onChange={e => setEditOptionDraft({...editOptionDraft, price: e.target.value})} placeholder="Price" />
+                            <button type="button" onClick={addEditProductOption} disabled={!editOptionDraft.name.trim() || editOptionDraft.price === ''} aria-label="Add inventory option" className="flex h-10 items-center justify-center rounded-lg bg-primary text-on-primary disabled:opacity-40"><PlusCircle size={18} /></button>
                           </div>
                         </div>
 
@@ -981,13 +1045,13 @@ export default function OperatorDashboard() {
                           </div>
                           <p className="text-sm text-on-surface-variant italic mb-2">฿{p.price.toLocaleString()} / {p.unit}</p>
                           <p className="text-xs text-on-surface-variant line-clamp-2">{p.description}</p>
-                          {((p.variations?.length || 0) > 0 || (p.portions?.length || 0) > 0) && (
-                            <div className="flex flex-wrap gap-1.5 mt-3">
-                              {p.variations?.map(option => (
-                                <span key={option} className="px-2 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-bold">{option}</span>
-                              ))}
-                              {p.portions?.map(option => (
-                                <span key={option} className="px-2 py-1 rounded-full bg-secondary/10 text-secondary text-[10px] font-bold">{option}</span>
+                          {(p.options?.length || 0) > 0 && (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 mt-3">
+                              {p.options?.map(option => (
+                                <div key={option.id} className={`flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-[10px] font-bold ${option.availability === 'visible' ? 'bg-emerald-50 text-emerald-800' : option.availability === 'out_of_stock' ? 'bg-red-50 text-red-800' : 'bg-gray-100 text-gray-700'}`}>
+                                  <span className="truncate">{option.name}</span>
+                                  <span className="shrink-0">{'\u0E3F'}{option.price.toLocaleString()} | {option.availability === 'visible' ? 'Shown' : option.availability === 'out_of_stock' ? 'Out' : 'Hidden'}</span>
+                                </div>
                               ))}
                             </div>
                           )}
@@ -1010,9 +1074,9 @@ export default function OperatorDashboard() {
                                   description: p.description, 
                                   details: p.details || '',
                                   image: p.image,
-                                  variations: p.variations?.join(', ') || '',
-                                  portions: p.portions?.join(', ') || ''
+                                  options: p.options || []
                                 }); 
+                                setEditOptionDraft({ name: '', price: '' });
                               }} title="Edit product" aria-label={`Edit ${p.name}`} className="p-3 md:p-4 bg-primary/10 text-primary rounded-xl hover:bg-primary/20 transition-all">
                                 <Edit2 size={24} />
                               </button>

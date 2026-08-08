@@ -38,6 +38,15 @@ if (!supabaseUrl || !supabaseKey) {
 
 const supabase = createClient(supabaseUrl || 'https://placeholder.supabase.co', supabaseKey || 'placeholder');
 
+const normalizeProductPayload = (body: Record<string, any>) => {
+  const { options, ...payload } = body;
+  if (Array.isArray(options)) {
+    payload.variations = options;
+    payload.portions = [];
+  }
+  return payload;
+};
+
 // --- Authentication Routes ---
 app.get('/api/auth/user-exists', async (req, res) => {
   const email = typeof req.query.email === 'string' ? req.query.email.trim().toLowerCase() : '';
@@ -63,13 +72,13 @@ app.get('/api/products', async (req, res) => {
 });
 
 app.post('/api/products', async (req, res) => {
-  const { data, error } = await supabase.from('products').insert([req.body]).select();
+  const { data, error } = await supabase.from('products').insert([normalizeProductPayload(req.body)]).select();
   if (error) return res.status(500).json({ error: error.message });
   res.status(201).json(data[0]);
 });
 
 app.put('/api/products/:id', async (req, res) => {
-  const { data, error } = await supabase.from('products').update(req.body).eq('id', req.params.id).select();
+  const { data, error } = await supabase.from('products').update(normalizeProductPayload(req.body)).eq('id', req.params.id).select();
   if (error) return res.status(500).json({ error: error.message });
   res.json(data[0]);
 });
