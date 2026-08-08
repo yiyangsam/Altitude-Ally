@@ -336,25 +336,64 @@ app.put('/api/donation/page_config', async (req, res) => {
 });
 
 // --- Market Page Config Routes ---
-app.get('/api/market/page_config', async (req, res) => {
+const defaultMarketHeroImage = 'https://images.unsplash.com/photo-1610348725531-843dff563e2c?auto=format&fit=crop&q=80&w=2000';
+const legacyMarketCarouselPrefix = 'altitude-ally-carousel:';
+
+const decodeLegacyMarketCarousel = (value: unknown) => {
+  if (typeof value !== 'string' || !value.startsWith(legacyMarketCarouselPrefix)) return null;
+  try {
+    const decoded = JSON.parse(value.slice(legacyMarketCarouselPrefix.length));
+    return decoded && typeof decoded === 'object' ? decoded : null;
+  } catch {
+    return null;
+  }
+};
+
+const normalizeMarketPageConfig = (config: Record<string, any> = {}) => {
+  const encodedConfig = decodeLegacyMarketCarousel(config.hero_image_url)
+    || decodeLegacyMarketCarousel(Array.isArray(config.hero_images) ? config.hero_images[0] : null);
+  const storedImages = encodedConfig?.hero_images || config.hero_images;
+  const configuredImages = Array.isArray(storedImages)
+    ? storedImages.filter((image: unknown): image is string => typeof image === 'string' && image.trim().length > 0 && !image.startsWith(legacyMarketCarouselPrefix))
+    : [];
+  const legacyImage = !encodedConfig && typeof config.hero_image_url === 'string' && config.hero_image_url.trim()
+    ? config.hero_image_url.trim()
+    : defaultMarketHeroImage;
+  const heroImages = configuredImages.length > 0 ? configuredImages : [legacyImage];
+
+  return {
+    ...config,
+    id: 1,
+    hero_image_url: heroImages[0],
+    hero_images: heroImages,
+    hero_interval_seconds: Math.min(60, Math.max(2, Number(encodedConfig?.hero_interval_seconds ?? config.hero_interval_seconds) || 5))
+  };
+};
+
+app.get('/api/market/page_config', async (_req, res) => {
   const { data, error } = await supabase.from('market_page_config').select('*').eq('id', 1).single();
   if (error || !data) {
-    return res.json({
-      id: 1,
-      hero_image_url: 'https://images.unsplash.com/photo-1610348725531-843dff563e2c?auto=format&fit=crop&q=80&w=2000'
-    });
+    return res.json(normalizeMarketPageConfig());
   }
-  res.json(data);
+  res.json(normalizeMarketPageConfig(data));
 });
 
 app.put('/api/market/page_config', async (req, res) => {
-  const payload = { id: 1, ...req.body };
+  const payload = normalizeMarketPageConfig(req.body);
   const { data, error } = await supabase.from('market_page_config').upsert(payload).select();
   if (error) {
-    console.warn('Could not save to Supabase (table might be missing), returning payload:', error.message);
-    return res.json(payload);
+    const legacyPayload = {
+      id: 1,
+      hero_image_url: `${legacyMarketCarouselPrefix}${JSON.stringify({
+        hero_images: payload.hero_images,
+        hero_interval_seconds: payload.hero_interval_seconds
+      })}`
+    };
+    const { data: legacyData, error: legacyError } = await supabase.from('market_page_config').upsert(legacyPayload).select();
+    if (legacyError) return res.status(500).json({ error: legacyError.message });
+    return res.json(normalizeMarketPageConfig(legacyData[0]));
   }
-  res.json(data[0]);
+  res.json(normalizeMarketPageConfig(data[0]));
 });
 
 // --- Footer Page Config Routes ---

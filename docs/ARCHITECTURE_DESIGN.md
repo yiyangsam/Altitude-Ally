@@ -3,9 +3,9 @@
 | Document field | Value |
 | --- | --- |
 | System | Altitude Ally Web Platform |
-| Document version | 1.2 |
+| Document version | 1.3 |
 | Architecture status | Current-state baseline with recommended production target |
-| Baseline date | 18 July 2026 |
+| Baseline date | 8 August 2026 |
 | Source branch | `V2` |
 | Primary deployment | Vercel |
 | Data and identity platform | Supabase |
@@ -198,7 +198,7 @@ The repository does not currently define contractual service-level objectives or
 | Module | Responsibilities |
 | --- | --- |
 | Application shell and navigation | Defines public and operator routes, shared header/footer, cart access, responsive navigation, and footer dialogs. |
-| Market and catalog | Loads visible products and categories, supports search/filtering, opens product details, selects variations/portions, and handles stock visibility. |
+| Market and catalog | Loads visible products and categories, presents an operator-configurable timed photo carousel, supports search/filtering, opens product details and full-description dialogs, selects variations/portions, and handles stock visibility. |
 | Cart | Builds a unique cart-line identity from product plus selected options, changes quantities, calculates totals, and persists cart state locally. |
 | Customer authentication | Registers users, requests email confirmation, signs users in/out, restores Supabase sessions, resends confirmation, and handles reset/update password flows. |
 | Customer profile | Creates or loads a profile linked to `auth.users`, and edits name, phone, and address details. |
@@ -289,10 +289,10 @@ Password recovery uses `resetPasswordForEmail`, redirects the customer to `/upda
 
 #### Product selection and cart
 
-1. The market page excludes products with `availability = hidden`.
-2. Selecting a product opens a detailed dialog with description, details, variations, and portions.
+1. The market page excludes products with `availability = hidden` and displays the catalog in a compact responsive grid.
+2. Selecting a product opens a detailed dialog with a short description, full-description popup, variations, and portions.
 3. A cart line ID combines the product ID and selected option values.
-4. The customer adds or adjusts quantity with minus and plus controls.
+4. The customer receives a temporary added-to-cart confirmation before the pinned action bar changes to minus and plus controls.
 5. Cart state and computed totals are written to browser `localStorage`.
 
 #### Checkout and manual payment
@@ -469,7 +469,7 @@ The database is PostgreSQL hosted by Supabase. UUID primary keys use the `uuid-o
 | `payment_config` | `qr_image`, `bank_info` | Singleton QR payment instructions used during checkout. |
 | `impact_page_config` | `hero_title`, `hero_description`, `showcase_title`, `showcase_image`, legacy transparency fields | Singleton impact-page content. |
 | `donation_page_config` | `title`, `subtitle`, `bottom_title`, external-link fields, `qr_image`, `qr_caption` | Singleton donation-page content. |
-| `market_page_config` | `hero_image_url` | Singleton market hero image. |
+| `market_page_config` | `hero_image_url`, `hero_images`, `hero_interval_seconds` | Singleton market carousel content and automatic rotation timing. The API can encode these values into the legacy image field until the additive migration is applied. |
 | `footer_page_config` | mission, privacy, terms, Instagram, email, LINE, Facebook fields | Singleton footer dialog and contact content. |
 | `admin_config` | `username`, `password` | Current operator credential configuration. This design must be replaced before production hardening. |
 

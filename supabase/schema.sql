@@ -168,8 +168,17 @@ insert into public.donation_page_config (
 -- Market Page Config Table
 create table public.market_page_config (
   id integer primary key default 1,
-  hero_image_url text not null
+  hero_image_url text not null,
+  hero_images jsonb not null default '[]'::jsonb,
+  hero_interval_seconds integer not null default 5
 );
+
+alter table public.market_page_config add column if not exists hero_images jsonb not null default '[]'::jsonb;
+alter table public.market_page_config add column if not exists hero_interval_seconds integer not null default 5;
+
+update public.market_page_config
+set hero_images = jsonb_build_array(hero_image_url)
+where jsonb_array_length(hero_images) = 0;
 
 -- Seed initial market page config
 insert into public.market_page_config (id, hero_image_url) values (

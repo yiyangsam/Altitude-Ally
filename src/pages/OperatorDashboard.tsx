@@ -95,7 +95,9 @@ export default function OperatorDashboard() {
   });
 
   const [marketPageForm, setMarketPageForm] = useState({
-    hero_image_url: ''
+    hero_image_url: '',
+    hero_images: [''],
+    hero_interval_seconds: 5
   });
   const [impactPageForm, setImpactPageForm] = useState({
     hero_title: '',
@@ -158,8 +160,11 @@ export default function OperatorDashboard() {
 
   useEffect(() => {
     if (marketPageConfig) {
+      const configuredImages = marketPageConfig.hero_images?.filter(Boolean) || [];
       setMarketPageForm({
-        hero_image_url: marketPageConfig.hero_image_url || ''
+        hero_image_url: configuredImages[0] || marketPageConfig.hero_image_url || '',
+        hero_images: configuredImages.length > 0 ? configuredImages : [marketPageConfig.hero_image_url || ''],
+        hero_interval_seconds: marketPageConfig.hero_interval_seconds || 5
       });
     }
   }, [marketPageConfig]);
@@ -446,8 +451,32 @@ export default function OperatorDashboard() {
 
   const handleMarketPageSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    updateMarketPageConfig(marketPageForm);
+    const heroImages = marketPageForm.hero_images.map(image => image.trim()).filter(Boolean);
+    if (heroImages.length === 0) return;
+    updateMarketPageConfig({
+      hero_image_url: heroImages[0],
+      hero_images: heroImages,
+      hero_interval_seconds: Math.min(60, Math.max(2, Number(marketPageForm.hero_interval_seconds) || 5))
+    });
     setIsPageConfigModalOpen(false);
+  };
+
+  const updateMarketHeroImage = (index: number, image: string) => {
+    setMarketPageForm(current => ({
+      ...current,
+      hero_images: current.hero_images.map((value, imageIndex) => imageIndex === index ? image : value)
+    }));
+  };
+
+  const addMarketHeroImage = () => {
+    setMarketPageForm(current => ({ ...current, hero_images: [...current.hero_images, ''] }));
+  };
+
+  const removeMarketHeroImage = (index: number) => {
+    setMarketPageForm(current => {
+      const heroImages = current.hero_images.filter((_, imageIndex) => imageIndex !== index);
+      return { ...current, hero_images: heroImages.length > 0 ? heroImages : [''] };
+    });
   };
 
   const handleFooterPageSubmit = (e: React.FormEvent) => {
@@ -810,10 +839,10 @@ export default function OperatorDashboard() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-outline ml-2">Detailed Description</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-outline ml-2">Full Description Popup</label>
                   <textarea 
                     className="block w-full px-6 py-4 bg-surface-container-low border-none rounded-2xl text-lg font-serif min-h-[120px]" 
-                    placeholder="Add care notes, origin, taste, delivery details, or anything shoppers should know..."
+                    placeholder="This text opens when the customer presses Details..."
                     value={newProduct.details}
                     onChange={e => setNewProduct({...newProduct, details: e.target.value})}
                   />
@@ -915,8 +944,8 @@ export default function OperatorDashboard() {
                         </div>
 
                         <div className="space-y-1">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-outline ml-2">Detailed Description</label>
-                          <textarea className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif min-h-[100px]" value={editForm.details} onChange={e => setEditForm({...editForm, details: e.target.value})} placeholder="Detailed description for the expanded product page" />
+                          <label className="text-[10px] font-black uppercase tracking-widest text-outline ml-2">Full Description Popup</label>
+                          <textarea className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-serif min-h-[100px]" value={editForm.details} onChange={e => setEditForm({...editForm, details: e.target.value})} placeholder="Text shown after the customer presses Details" />
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
@@ -1630,12 +1659,53 @@ export default function OperatorDashboard() {
                 {activeConfigTab === 'main' && (
                   <form onSubmit={handleMarketPageSubmit} className="space-y-6">
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-outline ml-2">Hero Image URL (Main Picture)</label>
-                      <input required className="w-full px-4 py-4 bg-surface-container-low border-none rounded-2xl text-sm font-serif" value={marketPageForm.hero_image_url} onChange={e => setMarketPageForm({...marketPageForm, hero_image_url: e.target.value})} placeholder="https://..." />
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-outline ml-2">Carousel Photos</label>
+                      <div className="space-y-4">
+                        {marketPageForm.hero_images.map((image, index) => (
+                          <div key={index} className="rounded-2xl border border-outline-variant/20 bg-surface-container-low p-3 space-y-3">
+                            <div className="flex items-center gap-2">
+                              <input
+                                required={index === 0}
+                                className="min-w-0 flex-1 px-4 py-3 bg-surface-container-lowest border-none rounded-xl text-sm font-serif"
+                                value={image}
+                                onChange={e => updateMarketHeroImage(index, e.target.value)}
+                                placeholder="Image URL"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removeMarketHeroImage(index)}
+                                aria-label={`Remove carousel photo ${index + 1}`}
+                                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-100 text-red-700 hover:bg-red-200"
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </div>
+                            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-surface-container-high px-4 py-3 text-sm font-bold text-primary hover:bg-surface-container-highest">
+                              <ImageIcon size={18} />
+                              Upload Photo {index + 1}
+                              <input type="file" accept="image/*" className="sr-only" onChange={e => loadImageFile(e.target.files?.[0], value => updateMarketHeroImage(index, value))} />
+                            </label>
+                            {image && <img src={image} alt={`Carousel preview ${index + 1}`} className="h-28 w-full rounded-xl object-cover bg-surface-container-high" />}
+                          </div>
+                        ))}
+                      </div>
+                      <button type="button" onClick={addMarketHeroImage} className="flex w-full items-center justify-center gap-2 rounded-2xl border border-primary/30 px-4 py-3 text-sm font-bold text-primary hover:bg-primary/5">
+                        <PlusCircle size={18} />
+                        Add Another Photo
+                      </button>
                     </div>
-                    {marketPageForm.hero_image_url && (
-                      <img src={marketPageForm.hero_image_url} alt="Preview" className="w-full h-48 object-cover rounded-2xl mt-4 bg-surface-container-low" />
-                    )}
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-outline ml-2">Seconds Between Photos</label>
+                      <input
+                        type="number"
+                        min="2"
+                        max="60"
+                        required
+                        className="w-full px-4 py-4 bg-surface-container-low border-none rounded-2xl text-sm font-serif"
+                        value={marketPageForm.hero_interval_seconds}
+                        onChange={e => setMarketPageForm({...marketPageForm, hero_interval_seconds: Number(e.target.value)})}
+                      />
+                    </div>
                     <button type="submit" className="w-full bg-primary text-on-primary py-4 rounded-2xl font-bold shadow-lg hover:scale-[0.98] transition-all text-lg">Save Configuration</button>
                   </form>
                 )}

@@ -85,6 +85,8 @@ export interface DonationPageConfig {
 
 export interface MarketPageConfig {
   hero_image_url: string;
+  hero_images: string[];
+  hero_interval_seconds: number;
 }
 
 export interface FooterPageConfig {
@@ -196,7 +198,19 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         if (paymentRes.ok) setPaymentConfig(await paymentRes.json());
         if (pageConfigRes.ok) setImpactPageConfig(await pageConfigRes.json());
         if (donationConfigRes.ok) setDonationPageConfig(await donationConfigRes.json());
-        if (marketConfigRes.ok) setMarketPageConfig(await marketConfigRes.json());
+        if (marketConfigRes.ok) {
+          const marketConfig = await marketConfigRes.json();
+          const heroImages = Array.isArray(marketConfig.hero_images)
+            ? marketConfig.hero_images.filter((image: unknown): image is string => typeof image === 'string' && image.trim().length > 0)
+            : [];
+          const legacyHeroImage = typeof marketConfig.hero_image_url === 'string' ? marketConfig.hero_image_url.trim() : '';
+          setMarketPageConfig({
+            ...marketConfig,
+            hero_image_url: heroImages[0] || legacyHeroImage,
+            hero_images: heroImages.length > 0 ? heroImages : legacyHeroImage ? [legacyHeroImage] : [],
+            hero_interval_seconds: Math.min(60, Math.max(2, Number(marketConfig.hero_interval_seconds) || 5))
+          });
+        }
         if (footerConfigRes.ok) setFooterPageConfig(await footerConfigRes.json());
       } catch (error) {
         console.error("Error fetching data:", error);
