@@ -23,6 +23,7 @@ export default function MarketPage() {
   const { products, categories: dataCategories, marketPageConfig } = useData();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
   const [addedId, setAddedId] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedVariationId, setSelectedVariationId] = useState('');
@@ -187,18 +188,61 @@ export default function MarketPage() {
 
       <section className="px-3 md:px-10 md:max-w-none max-w-7xl mx-auto mb-6 sticky top-16 md:top-20 z-40">
         <div className="bg-surface-bright/80 backdrop-blur-xl p-1.5 md:p-4 rounded-xl md:rounded-2xl flex flex-col md:flex-row gap-2 md:gap-4 items-stretch md:items-center shadow-lg border border-outline-variant/15">
-          <div className="flex min-w-0 flex-1 justify-start gap-1 overflow-x-auto no-scrollbar py-0.5">
-            {categories.map(category => (
-              <button
-                key={category}
-                type="button"
-                aria-pressed={activeCategory === category}
-                onClick={() => setActiveCategory(current => current === category ? null : category)}
-                className={`px-3 md:px-6 py-1 md:py-2.5 rounded-full text-[10px] md:text-sm font-semibold whitespace-nowrap transition-all ${activeCategory === category ? 'bg-primary text-on-primary shadow-lg' : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest'}`}
-              >
-                {category}
-              </button>
-            ))}
+          <div className="relative self-start md:self-auto md:mr-auto">
+            <button
+              type="button"
+              aria-expanded={isCategoryMenuOpen}
+              aria-haspopup="menu"
+              onClick={() => setIsCategoryMenuOpen(current => !current)}
+              className={`flex min-h-9 items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold transition-all md:min-h-12 md:rounded-xl md:px-5 md:text-sm ${isCategoryMenuOpen || activeCategory ? 'bg-primary text-on-primary shadow-md' : 'bg-surface-container-high text-on-surface hover:bg-surface-container-highest'}`}
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              <span>{activeCategory || 'Filter'}</span>
+              <ChevronRight className={`h-4 w-4 transition-transform ${isCategoryMenuOpen ? 'rotate-90' : ''}`} />
+            </button>
+
+            <AnimatePresence>
+              {isCategoryMenuOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                  role="menu"
+                  aria-label="Product categories"
+                  className="absolute left-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-xl border border-outline-variant/20 bg-surface-bright p-2 shadow-2xl"
+                >
+                  <button
+                    type="button"
+                    role="menuitemradio"
+                    aria-checked={!activeCategory}
+                    onClick={() => {
+                      setActiveCategory(null);
+                      setIsCategoryMenuOpen(false);
+                    }}
+                    className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm font-semibold transition-colors ${!activeCategory ? 'bg-primary text-on-primary' : 'text-on-surface hover:bg-surface-container-high'}`}
+                  >
+                    All Produce
+                    {!activeCategory && <Check className="h-4 w-4" />}
+                  </button>
+                  {categories.map(category => (
+                    <button
+                      key={category}
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={activeCategory === category}
+                      onClick={() => {
+                        setActiveCategory(category);
+                        setIsCategoryMenuOpen(false);
+                      }}
+                      className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm font-semibold transition-colors ${activeCategory === category ? 'bg-primary text-on-primary' : 'text-on-surface hover:bg-surface-container-high'}`}
+                    >
+                      {category}
+                      {activeCategory === category && <Check className="h-4 w-4" />}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
           <div className="relative w-full md:w-96 md:shrink-0">
             <Search className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-on-surface-variant w-3.5 h-3.5 md:w-5 md:h-5" />
