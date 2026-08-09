@@ -22,8 +22,7 @@ export default function MarketPage() {
   const { cart, addToCart, updateQuantity } = useCart();
   const { products, categories: dataCategories, marketPageConfig } = useData();
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [addedId, setAddedId] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedVariationId, setSelectedVariationId] = useState('');
@@ -83,9 +82,15 @@ export default function MarketPage() {
     const matchesSearch = product.name.toLowerCase().includes(normalizedQuery)
       || product.description.toLowerCase().includes(normalizedQuery)
       || (product.details || '').toLowerCase().includes(normalizedQuery);
-    const matchesCategory = !activeCategory || product.category === activeCategory;
+    const matchesCategory = selectedCategories.length === 0 || selectedCategories.includes(product.category);
     return product.availability !== 'hidden' && matchesSearch && matchesCategory;
   });
+
+  const toggleCategory = (category: string) => {
+    setSelectedCategories(current => current.includes(category)
+      ? current.filter(selected => selected !== category)
+      : [...current, category]);
+  };
 
   const openProduct = (product: Product) => {
     const selectableVariations = product.variations?.filter(option => option.availability !== 'hidden') || [];
@@ -187,64 +192,8 @@ export default function MarketPage() {
       </section>
 
       <section className="px-3 md:px-10 md:max-w-none max-w-7xl mx-auto mb-6 sticky top-16 md:top-20 z-40">
-        <div className="bg-surface-bright/80 backdrop-blur-xl p-1.5 md:p-4 rounded-xl md:rounded-2xl flex flex-col md:flex-row gap-2 md:gap-4 items-stretch md:items-center shadow-lg border border-outline-variant/15">
-          <div className="relative self-start md:self-auto md:mr-auto">
-            <button
-              type="button"
-              aria-expanded={isCategoryMenuOpen}
-              aria-haspopup="menu"
-              onClick={() => setIsCategoryMenuOpen(current => !current)}
-              className={`flex min-h-9 items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold transition-all md:min-h-12 md:rounded-xl md:px-5 md:text-sm ${isCategoryMenuOpen || activeCategory ? 'bg-primary text-on-primary shadow-md' : 'bg-surface-container-high text-on-surface hover:bg-surface-container-highest'}`}
-            >
-              <SlidersHorizontal className="h-4 w-4" />
-              <span>{activeCategory || 'Filter'}</span>
-              <ChevronRight className={`h-4 w-4 transition-transform ${isCategoryMenuOpen ? 'rotate-90' : ''}`} />
-            </button>
-
-            <AnimatePresence>
-              {isCategoryMenuOpen && (
-                <motion.div
-                  initial={{ opacity: 0, y: -8, scale: 0.98 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -8, scale: 0.98 }}
-                  role="menu"
-                  aria-label="Product categories"
-                  className="absolute left-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-xl border border-outline-variant/20 bg-surface-bright p-2 shadow-2xl"
-                >
-                  <button
-                    type="button"
-                    role="menuitemradio"
-                    aria-checked={!activeCategory}
-                    onClick={() => {
-                      setActiveCategory(null);
-                      setIsCategoryMenuOpen(false);
-                    }}
-                    className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm font-semibold transition-colors ${!activeCategory ? 'bg-primary text-on-primary' : 'text-on-surface hover:bg-surface-container-high'}`}
-                  >
-                    All Produce
-                    {!activeCategory && <Check className="h-4 w-4" />}
-                  </button>
-                  {categories.map(category => (
-                    <button
-                      key={category}
-                      type="button"
-                      role="menuitemradio"
-                      aria-checked={activeCategory === category}
-                      onClick={() => {
-                        setActiveCategory(category);
-                        setIsCategoryMenuOpen(false);
-                      }}
-                      className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm font-semibold transition-colors ${activeCategory === category ? 'bg-primary text-on-primary' : 'text-on-surface hover:bg-surface-container-high'}`}
-                    >
-                      {category}
-                      {activeCategory === category && <Check className="h-4 w-4" />}
-                    </button>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-          <div className="relative w-full md:w-96 md:shrink-0">
+        <div className="flex justify-end rounded-xl border border-outline-variant/15 bg-surface-bright/80 p-1.5 shadow-lg backdrop-blur-xl md:rounded-2xl md:p-4">
+          <div className="relative w-full md:w-96">
             <Search className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-on-surface-variant w-3.5 h-3.5 md:w-5 md:h-5" />
             <input
               className="w-full pl-8 md:pl-12 pr-10 py-2 md:py-4 rounded-lg md:rounded-2xl bg-surface-container-low border-none focus:ring-1 md:ring-2 focus:ring-primary transition-all text-[10px] md:text-base placeholder:text-on-surface-variant/50"
@@ -258,8 +207,47 @@ export default function MarketPage() {
       </section>
 
       <section className="px-2 md:px-8 md:max-w-none max-w-7xl mx-auto pb-24">
-        {filteredProducts.length > 0 ? (
-          <div className="grid grid-cols-4 md:grid-cols-8 gap-1.5 md:gap-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-[220px_minmax(0,1fr)] md:gap-5">
+          <aside className="rounded-xl border border-outline-variant/20 bg-surface-container-lowest p-3 shadow-sm md:sticky md:top-44 md:self-start md:p-5" aria-label="Product filters">
+            <div className="mb-3 flex items-center justify-between gap-3 md:mb-5">
+              <div className="flex items-center gap-2 text-on-surface">
+                <SlidersHorizontal className="h-4 w-4 text-primary md:h-5 md:w-5" />
+                <h2 className="text-sm font-black md:text-lg">Categories</h2>
+              </div>
+              {selectedCategories.length > 0 && (
+                <button type="button" onClick={() => setSelectedCategories([])} className="text-[10px] font-bold text-primary hover:underline md:text-xs">
+                  Clear
+                </button>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-1 md:gap-2" role="group" aria-label="Choose one or more categories">
+              <label className={`flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold transition-colors md:px-3 md:py-2.5 md:text-sm ${selectedCategories.length === 0 ? 'bg-primary/10 text-primary' : 'text-on-surface hover:bg-surface-container-high'}`}>
+                <input
+                  type="checkbox"
+                  checked={selectedCategories.length === 0}
+                  onChange={() => setSelectedCategories([])}
+                  className="h-4 w-4 shrink-0 rounded border-outline accent-primary"
+                />
+                <span>All Produce</span>
+              </label>
+              {categories.map(category => (
+                <label key={category} className={`flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold transition-colors md:px-3 md:py-2.5 md:text-sm ${selectedCategories.includes(category) ? 'bg-primary/10 text-primary' : 'text-on-surface hover:bg-surface-container-high'}`}>
+                  <input
+                    type="checkbox"
+                    checked={selectedCategories.includes(category)}
+                    onChange={() => toggleCategory(category)}
+                    className="h-4 w-4 shrink-0 rounded border-outline accent-primary"
+                  />
+                  <span className="truncate">{category}</span>
+                </label>
+              ))}
+            </div>
+          </aside>
+
+          <div className="min-w-0">
+          {filteredProducts.length > 0 ? (
+            <div className="grid grid-cols-4 md:grid-cols-8 gap-1.5 md:gap-3">
             <AnimatePresence mode="popLayout">
               {filteredProducts.map(product => {
                 const customerVariations = product.variations?.filter(option => option.availability !== 'hidden') || [];
@@ -324,11 +312,13 @@ export default function MarketPage() {
             </div>
             <h3 className="text-2xl font-bold text-on-surface mb-2 font-serif">Harvest Not Found</h3>
             <p className="text-on-surface-variant max-w-xs">We couldn't find any products matching your search or category selection.</p>
-            <button onClick={() => { setSearchQuery(''); setActiveCategory(null); }} className="mt-8 text-primary font-bold hover:underline">
+            <button onClick={() => { setSearchQuery(''); setSelectedCategories([]); }} className="mt-8 text-primary font-bold hover:underline">
               Clear all filters
             </button>
           </div>
         )}
+          </div>
+        </div>
       </section>
 
       <AnimatePresence>
