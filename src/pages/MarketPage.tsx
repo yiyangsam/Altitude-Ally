@@ -22,7 +22,7 @@ export default function MarketPage() {
   const { cart, addToCart, updateQuantity } = useCart();
   const { products, categories: dataCategories, marketPageConfig } = useData();
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState('All Produce');
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [addedId, setAddedId] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedVariationId, setSelectedVariationId] = useState('');
@@ -39,7 +39,7 @@ export default function MarketPage() {
       : [marketPageConfig?.hero_image_url || fallbackHeroImage];
   }, [marketPageConfig]);
   const heroIntervalMs = Math.min(60, Math.max(2, marketPageConfig?.hero_interval_seconds || 5)) * 1000;
-  const categories = ['All Produce', ...dataCategories.map(category => category.name)];
+  const categories = dataCategories.map(category => category.name);
 
   useEffect(() => {
     setActiveHeroIndex(current => current < heroImages.length ? current : 0);
@@ -82,7 +82,7 @@ export default function MarketPage() {
     const matchesSearch = product.name.toLowerCase().includes(normalizedQuery)
       || product.description.toLowerCase().includes(normalizedQuery)
       || (product.details || '').toLowerCase().includes(normalizedQuery);
-    const matchesCategory = activeCategory === 'All Produce' || product.category === activeCategory;
+    const matchesCategory = !activeCategory || product.category === activeCategory;
     return product.availability !== 'hidden' && matchesSearch && matchesCategory;
   });
 
@@ -186,8 +186,21 @@ export default function MarketPage() {
       </section>
 
       <section className="px-3 md:px-10 md:max-w-none max-w-7xl mx-auto mb-6 sticky top-16 md:top-20 z-40">
-        <div className="bg-surface-bright/80 backdrop-blur-xl p-1.5 md:p-4 rounded-xl md:rounded-2xl flex flex-col md:flex-row gap-2 md:gap-4 items-center shadow-lg border border-outline-variant/15">
-          <div className="relative w-full md:w-96">
+        <div className="bg-surface-bright/80 backdrop-blur-xl p-1.5 md:p-4 rounded-xl md:rounded-2xl flex flex-col md:flex-row gap-2 md:gap-4 items-stretch md:items-center shadow-lg border border-outline-variant/15">
+          <div className="flex min-w-0 flex-1 justify-start gap-1 overflow-x-auto no-scrollbar py-0.5">
+            {categories.map(category => (
+              <button
+                key={category}
+                type="button"
+                aria-pressed={activeCategory === category}
+                onClick={() => setActiveCategory(current => current === category ? null : category)}
+                className={`px-3 md:px-6 py-1 md:py-2.5 rounded-full text-[10px] md:text-sm font-semibold whitespace-nowrap transition-all ${activeCategory === category ? 'bg-primary text-on-primary shadow-lg' : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest'}`}
+              >
+                {category}
+              </button>
+            ))}
+          </div>
+          <div className="relative w-full md:w-96 md:shrink-0">
             <Search className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-on-surface-variant w-3.5 h-3.5 md:w-5 md:h-5" />
             <input
               className="w-full pl-8 md:pl-12 pr-10 py-2 md:py-4 rounded-lg md:rounded-2xl bg-surface-container-low border-none focus:ring-1 md:ring-2 focus:ring-primary transition-all text-[10px] md:text-base placeholder:text-on-surface-variant/50"
@@ -196,17 +209,6 @@ export default function MarketPage() {
               value={searchQuery}
               onChange={event => setSearchQuery(event.target.value)}
             />
-          </div>
-          <div className="flex gap-1 overflow-x-auto no-scrollbar w-full py-0.5">
-            {categories.map(category => (
-              <button
-                key={category}
-                onClick={() => setActiveCategory(category)}
-                className={`px-3 md:px-6 py-1 md:py-2.5 rounded-full text-[10px] md:text-sm font-semibold whitespace-nowrap transition-all ${activeCategory === category ? 'bg-primary text-on-primary shadow-lg' : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest'}`}
-              >
-                {category}
-              </button>
-            ))}
           </div>
         </div>
       </section>
@@ -278,7 +280,7 @@ export default function MarketPage() {
             </div>
             <h3 className="text-2xl font-bold text-on-surface mb-2 font-serif">Harvest Not Found</h3>
             <p className="text-on-surface-variant max-w-xs">We couldn't find any products matching your search or category selection.</p>
-            <button onClick={() => { setSearchQuery(''); setActiveCategory('All Produce'); }} className="mt-8 text-primary font-bold hover:underline">
+            <button onClick={() => { setSearchQuery(''); setActiveCategory(null); }} className="mt-8 text-primary font-bold hover:underline">
               Clear all filters
             </button>
           </div>
