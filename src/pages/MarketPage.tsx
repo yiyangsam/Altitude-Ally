@@ -247,7 +247,7 @@ export default function MarketPage() {
 
           <div className="min-w-0">
           {filteredProducts.length > 0 ? (
-            <div className="grid grid-cols-4 md:grid-cols-8 gap-1.5 md:gap-3">
+            <div className="grid grid-cols-3 md:grid-cols-8 gap-1.5 md:gap-3">
             <AnimatePresence mode="popLayout">
               {filteredProducts.map(product => {
                 const customerVariations = product.variations?.filter(option => option.availability !== 'hidden') || [];
