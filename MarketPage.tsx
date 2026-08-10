@@ -18,7 +18,7 @@ import { useCart } from '../lib/CartContext';
 import { useData, type Product } from '../lib/DataContext';
 
 const fallbackHeroImage = 'https://images.unsplash.com/photo-1610348725531-843dff563e2c?auto=format&fit=crop&q=80&w=2000';
-const categoryPreviewLimit = 6;
+const collapsedCategoryControlLimit = 6;
 
 export default function MarketPage() {
   const { cart, addToCart, updateQuantity } = useCart();
@@ -43,8 +43,9 @@ export default function MarketPage() {
   }, [marketPageConfig]);
   const heroIntervalMs = Math.min(60, Math.max(2, marketPageConfig?.hero_interval_seconds || 5)) * 1000;
   const categories = dataCategories.map(category => category.name);
-  const visibleCategories = isCategoryListExpanded ? categories : categories.slice(0, categoryPreviewLimit);
-  const canExpandCategories = categories.length > categoryPreviewLimit;
+  const collapsedCategoryLimit = collapsedCategoryControlLimit - 1;
+  const visibleCategories = isCategoryListExpanded ? categories : categories.slice(0, collapsedCategoryLimit);
+  const canExpandCategories = categories.length > collapsedCategoryLimit;
 
   useEffect(() => {
     setActiveHeroIndex(current => current < heroImages.length ? current : 0);
