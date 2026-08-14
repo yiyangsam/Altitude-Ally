@@ -14,12 +14,15 @@ import {
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useCart } from '../lib/CartContext';
+import { useAuth } from '../lib/AuthContext';
 import { useData, type Product } from '../lib/DataContext';
+import { DELIVERY_PLUS_TIERS, STANDARD_DELIVERY_TIERS, formatDeliveryFee, isDeliveryPlusProduct } from '../lib/deliveryPlus';
 
 const fallbackHeroImage = 'https://images.unsplash.com/photo-1610348725531-843dff563e2c?auto=format&fit=crop&q=80&w=2000';
 
 export default function MarketPage() {
   const { cart, addToCart, updateQuantity } = useCart();
+  const { user } = useAuth();
   const { products, categories: dataCategories, marketPageConfig } = useData();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -93,6 +96,7 @@ export default function MarketPage() {
   };
 
   const openProduct = (product: Product) => {
+    if (isDeliveryPlusProduct(product) && user?.deliveryPlusOwned) return;
     const selectableVariations = product.variations?.filter(option => option.availability !== 'hidden') || [];
     const selectablePortions = product.portions?.filter(option => option.availability !== 'hidden') || [];
     const initialVariation = selectableVariations.find(option => option.availability === 'visible') || selectableVariations[0];
@@ -261,6 +265,8 @@ export default function MarketPage() {
                   || ((product.variations?.length || 0) > 0 && visibleVariationsForPrice.length === 0)
                   || ((product.portions?.length || 0) > 0 && visiblePortionsForPrice.length === 0);
                 const configurationCount = Math.max(1, visibleVariationsForPrice.length) * Math.max(1, visiblePortionsForPrice.length);
+                const isDeliveryPlus = isDeliveryPlusProduct(product);
+                const alreadyOwned = isDeliveryPlus && Boolean(user?.deliveryPlusOwned);
                 return (
                 <motion.article
                   key={product.id}
@@ -270,11 +276,14 @@ export default function MarketPage() {
                   exit={{ opacity: 0, scale: 0.94 }}
                   whileHover={{ y: -3 }}
                   onClick={() => openProduct(product)}
-                  className="group relative min-w-0 bg-surface-container-lowest rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer"
+                  className={`group relative min-w-0 rounded-lg overflow-hidden shadow-sm transition-all ${alreadyOwned ? 'bg-surface-container-high opacity-60 grayscale cursor-not-allowed' : 'bg-surface-container-lowest hover:shadow-md cursor-pointer'}`}
                 >
                   <div className="aspect-square bg-surface-variant overflow-hidden relative">
                     <img alt={product.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" src={product.image} referrerPolicy="no-referrer" />
-                    {productUnavailable && (
+                    {alreadyOwned && (
+                      <span className="absolute left-1 top-1 md:left-2 md:top-2 px-1.5 py-1 rounded-md bg-surface-container-highest text-on-surface text-[7px] md:text-[9px] font-black uppercase shadow-lg">Already Owned</span>
+                    )}
+                    {productUnavailable && !alreadyOwned && (
                       <span className="absolute left-1 top-1 md:left-2 md:top-2 px-1.5 py-1 rounded-md bg-red-600 text-white text-[7px] md:text-[9px] font-black uppercase shadow-lg">
                         Out of Stock
                       </span>
@@ -289,10 +298,10 @@ export default function MarketPage() {
                         event.stopPropagation();
                         openProduct(product);
                       }}
-                      disabled={productUnavailable}
-                      className={`w-full min-h-7 md:min-h-8 px-1 py-1 rounded-md font-bold text-[8px] md:text-[10px] flex items-center justify-center gap-1 transition-all active:scale-95 shadow-sm ${productUnavailable ? 'bg-red-100 text-red-700 cursor-not-allowed' : 'bg-surface-container-highest text-on-surface hover:bg-primary hover:text-on-primary'}`}
+                      disabled={productUnavailable || alreadyOwned}
+                      className={`w-full min-h-7 md:min-h-8 px-1 py-1 rounded-md font-bold text-[8px] md:text-[10px] flex items-center justify-center gap-1 transition-all active:scale-95 shadow-sm ${alreadyOwned ? 'bg-surface-container-highest text-outline cursor-not-allowed' : productUnavailable ? 'bg-red-100 text-red-700 cursor-not-allowed' : isDeliveryPlus ? 'bg-amber-400 text-amber-950 hover:bg-amber-300' : 'bg-surface-container-highest text-on-surface hover:bg-primary hover:text-on-primary'}`}
                     >
-                      {productUnavailable ? 'Unavailable' : (
+                      {alreadyOwned ? 'Already owned' : productUnavailable ? 'Unavailable' : (
                         <>
                           <ShoppingCart className="hidden sm:block w-3 h-3" />
                           Add
@@ -322,7 +331,44 @@ export default function MarketPage() {
       </section>
 
       <AnimatePresence>
-        {selectedProduct && (
+        {selectedProduct && isDeliveryPlusProduct(selectedProduct) && (
+          <div className="fixed inset-0 z-[105] flex items-center justify-center p-3 md:p-8">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={closeProduct} className="absolute inset-0 bg-on-surface/55 backdrop-blur-sm" />
+            <motion.section initial={{ opacity: 0, scale: 0.96, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 20 }} className="relative max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-2xl border border-amber-200 bg-surface p-5 shadow-2xl md:p-9">
+              <button onClick={closeProduct} aria-label="Close Delivery+" className="absolute right-4 top-4 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-surface-container-high text-on-surface"><X className="h-5 w-5" /></button>
+              <div className="mx-auto mb-7 max-w-2xl text-center">
+                <img src={selectedProduct.image} alt={selectedProduct.name} className="mx-auto mb-4 h-20 w-20 rounded-2xl object-cover shadow-md md:h-24 md:w-24" />
+                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-700">Permanent perk</p>
+                <h2 className="mt-2 text-3xl font-serif font-black italic md:text-5xl">Delivery+</h2>
+                <p className="mt-3 text-sm text-on-surface-variant md:text-base">Buy once and keep cheaper delivery pricing on future Altitude Ally orders.</p>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2 md:gap-6">
+                <div className="rounded-2xl border border-outline-variant/20 bg-surface-container-lowest p-5 md:p-7">
+                  <p className="text-xs font-black uppercase tracking-[0.2em] text-on-surface-variant">Normal</p>
+                  <h3 className="mt-2 text-2xl font-serif font-black">Standard Delivery</h3>
+                  <div className="mt-6 space-y-3">
+                    {STANDARD_DELIVERY_TIERS.map(tier => <div key={tier.label} className="flex justify-between border-b border-outline-variant/10 pb-2 text-sm"><span>{tier.label}</span><strong>{formatDeliveryFee(tier.fee)}</strong></div>)}
+                  </div>
+                </div>
+                <div className="relative rounded-2xl border border-amber-300 bg-gradient-to-b from-amber-50 to-amber-100/60 p-5 shadow-lg md:p-7">
+                  <span className="absolute right-4 top-4 rounded-full bg-amber-400 px-3 py-1 text-[9px] font-black uppercase tracking-wider text-amber-950">Delivery+</span>
+                  <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-700">Gold perk</p>
+                  <h3 className="mt-2 text-2xl font-serif font-black text-amber-950">Cheaper Delivery</h3>
+                  <div className="mt-6 space-y-3">
+                    {DELIVERY_PLUS_TIERS.map(tier => <div key={tier.label} className="flex justify-between border-b border-amber-200 pb-2 text-sm text-amber-950"><span>{tier.label}</span><strong>{formatDeliveryFee(tier.fee)}</strong></div>)}
+                  </div>
+                  <button type="button" onClick={() => handleAddToCart(selectedProduct)} disabled={Boolean(user?.deliveryPlusOwned) || selectedQuantity > 0} className="mt-6 w-full rounded-xl bg-amber-400 px-5 py-4 font-black text-amber-950 shadow-md transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-500">
+                    {user?.deliveryPlusOwned ? 'Already owned' : selectedQuantity > 0 ? 'Added to cart' : `Add Delivery+ · ฿${selectedProduct.price.toLocaleString()}`}
+                  </button>
+                </div>
+              </div>
+            </motion.section>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {selectedProduct && !isDeliveryPlusProduct(selectedProduct) && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 md:p-10">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={closeProduct} className="absolute inset-0 bg-on-surface/50 backdrop-blur-sm" />
             <motion.div initial={{ opacity: 0, scale: 0.96, y: 24 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 24 }} className="relative w-full md:w-[min(1180px,calc(100vw-5rem))] max-h-[92vh] md:max-h-[86vh] bg-surface rounded-xl md:rounded-2xl shadow-2xl overflow-hidden border border-outline-variant/20">

@@ -118,7 +118,14 @@ export default function AccountPage() {
                          animate={{ opacity: 1 }}
                          exit={{ opacity: 0 }}
                       >
-                         <h2 className="text-2xl md:text-7xl font-serif font-black text-on-surface mb-1 md:mb-3 tracking-tighter">{user.name}</h2>
+                         <div className="flex items-center justify-center gap-2 md:justify-start md:gap-3">
+                           <h2 className="text-2xl md:text-7xl font-serif font-black text-on-surface mb-1 md:mb-3 tracking-tighter">{user.name}</h2>
+                           {user.deliveryPlusOwned && (
+                             <span title="Delivery+ member" aria-label="Delivery+ member" className="mb-1 inline-flex h-6 w-6 items-center justify-center rounded-full bg-amber-100 shadow-sm ring-1 ring-amber-300 md:mb-3 md:h-8 md:w-8">
+                               <img src="/logo.png" alt="" className="h-4 w-4 object-contain md:h-5 md:w-5" style={{ filter: 'sepia(1) saturate(5) hue-rotate(355deg) brightness(1.05)' }} />
+                             </span>
+                           )}
+                         </div>
                       </motion.div>
                     )}
                   </AnimatePresence>

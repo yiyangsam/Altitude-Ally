@@ -19,15 +19,17 @@ import {
   Mail,
   MessageCircle,
   Facebook,
-  User as UserIcon
+  User as UserIcon,
+  X
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
+import { formatDeliveryFee, getDeliveryPlusFee, getStandardDeliveryFee, isDeliveryPlusCartItem, isDeliveryPlusProduct } from '../lib/deliveryPlus';
 
 export default function CheckoutPage() {
-  const { cart, removeFromCart, updateQuantity, totalPrice, clearCart } = useCart();
+  const { cart, addToCart, removeFromCart, updateQuantity, totalPrice, clearCart } = useCart();
   const { user, updateProfile, isLoggedIn, addOrder: addUserOrder } = useAuth();
-  const { addOrder: addGlobalOrder, paymentConfig, footerPageConfig } = useData();
+  const { products, addOrder: addGlobalOrder, paymentConfig, footerPageConfig } = useData();
   const navigate = useNavigate();
   
   const [isSuccess, setIsSuccess] = useState(false);
@@ -37,12 +39,19 @@ export default function CheckoutPage() {
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
   const [isOrderSubmitted, setIsOrderSubmitted] = useState(false);
   const [orderError, setOrderError] = useState('');
+  const [showDeliveryPlusOffer, setShowDeliveryPlusOffer] = useState(true);
   const [tempDetails, setTempDetails] = useState({
     address: user?.address || '',
     phone: user?.phone || ''
   });
 
-  const grandTotal = totalPrice;
+  const deliveryPlusProduct = products.find(product => isDeliveryPlusProduct(product));
+  const deliveryPlusInCart = cart.some(item => isDeliveryPlusCartItem(item));
+  const deliveryPlusActive = Boolean(user?.deliveryPlusOwned) || deliveryPlusInCart;
+  const merchandiseSubtotal = cart.reduce((sum, item) => isDeliveryPlusCartItem(item) ? sum : sum + item.price * item.quantity, 0);
+  const standardDeliveryFee = getStandardDeliveryFee(merchandiseSubtotal);
+  const deliveryFee = deliveryPlusActive ? getDeliveryPlusFee(merchandiseSubtotal) : standardDeliveryFee;
+  const grandTotal = totalPrice + deliveryFee;
   const paymentBankInfo = paymentConfig?.bank_info
     .replace(/\s*\(Altitude Collectives\)\s*/gi, ' ')
     .trim();
@@ -77,7 +86,11 @@ export default function CheckoutPage() {
         user_id: user.id,
         customerName: user.name,
         total: grandTotal,
-        items: orderItems
+        items: orderItems,
+        deliveryFee,
+        standardDeliveryFee,
+        deliveryPlusApplied: deliveryPlusActive,
+        containsDeliveryPlus: deliveryPlusInCart
       });
 
       addUserOrder({
@@ -97,8 +110,15 @@ export default function CheckoutPage() {
     }
   };
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (checkoutStep !== 'payment' || !isOrderSubmitted) return;
+
+    // Temporary bridge until EasySlip is added: the site's existing manual
+    // Confirm Payment action activates a newly purchased permanent perk.
+    // Later, EasySlip verification should be the event that performs this update.
+    if (deliveryPlusInCart && user && !user.deliveryPlusOwned) {
+      await updateProfile({ deliveryPlusOwned: true });
+    }
 
     clearCart();
     setIsSuccess(true);
@@ -421,6 +441,17 @@ export default function CheckoutPage() {
                     <span>Subtotal</span>
                     <span className="text-on-surface">฿{totalPrice.toLocaleString()}</span>
                   </div>
+                  <div className="flex justify-between gap-4 text-xs md:text-sm">
+                    <span className="font-medium text-on-surface-variant">Delivery</span>
+                    {deliveryPlusActive ? (
+                      <span className="text-right">
+                        <span className="block text-[10px] text-outline line-through md:text-xs">{formatDeliveryFee(standardDeliveryFee)}</span>
+                        <strong className="block text-amber-700">{formatDeliveryFee(deliveryFee)} · Delivery+</strong>
+                      </span>
+                    ) : (
+                      <strong className="text-on-surface">{formatDeliveryFee(deliveryFee)}</strong>
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex justify-between items-end mb-6 md:mb-12">
@@ -499,6 +530,23 @@ export default function CheckoutPage() {
           </div>
         )}
       </div>
+
+      <AnimatePresence>
+        {showDeliveryPlusOffer && checkoutStep === 'basket' && isLoggedIn && !user?.deliveryPlusOwned && !deliveryPlusInCart && deliveryPlusProduct && (
+          <motion.aside initial={{ opacity: 0, x: 30, y: 20 }} animate={{ opacity: 1, x: 0, y: 0 }} exit={{ opacity: 0, x: 30 }} className="fixed bottom-4 right-4 z-[80] w-[calc(100vw-2rem)] max-w-sm overflow-hidden rounded-2xl border border-amber-200 bg-surface shadow-2xl">
+            <button type="button" onClick={() => setShowDeliveryPlusOffer(false)} aria-label="Close Delivery+ offer" className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-surface/90 text-on-surface"><X className="h-4 w-4" /></button>
+            <div className="flex items-stretch">
+              <img src={deliveryPlusProduct.image} alt="Delivery+" className="w-28 shrink-0 object-cover" />
+              <div className="min-w-0 p-4 pr-10">
+                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-amber-700">Save on delivery</p>
+                <h4 className="mt-1 font-serif text-lg font-black">Add Delivery+</h4>
+                <p className="mt-1 text-xs leading-relaxed text-on-surface-variant">Buy once, keep the perk permanently, and use the lower delivery tier on this order too.</p>
+                <button type="button" onClick={() => { addToCart({ ...deliveryPlusProduct, productId: deliveryPlusProduct.id }); setShowDeliveryPlusOffer(false); }} className="mt-3 rounded-lg bg-amber-400 px-3 py-2 text-xs font-black text-amber-950 hover:bg-amber-300">Add · ฿{deliveryPlusProduct.price.toLocaleString()}</button>
+              </div>
+            </div>
+          </motion.aside>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
