@@ -32,6 +32,10 @@ export interface Order {
   total: number;
   items: string[];
   status: 'Pending' | 'Delivered' | 'Processing' | 'Completed';
+  deliveryFee?: number;
+  standardDeliveryFee?: number;
+  deliveryPlusApplied?: boolean;
+  containsDeliveryPlus?: boolean;
 }
 
 export interface User {
@@ -42,6 +46,7 @@ export interface User {
   address?: string;
   role: 'Customer' | 'Volunteer' | 'Donor';
   joinedDate: string;
+  deliveryPlusOwned?: boolean;
 }
 
 export interface Category {

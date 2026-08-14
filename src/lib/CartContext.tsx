@@ -8,6 +8,7 @@ export interface CartItem {
   quantity: number;
   image: string;
   unit: string;
+  category?: string;
   selectedVariation?: string;
   selectedPortion?: string;
 }

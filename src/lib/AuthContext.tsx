@@ -16,6 +16,7 @@ export interface User {
   phone: string;
   address: string;
   joinedDate: string;
+  deliveryPlusOwned: boolean;
   orders: Order[];
 }
 
@@ -88,6 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const profile = await res.json();
         setUser({
           ...profile,
+          deliveryPlusOwned: Boolean(profile.deliveryPlusOwned),
           orders: Array.isArray(profile.orders) ? profile.orders : []
         });
       } else if (res.status === 404) {
@@ -98,7 +100,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           phone: '',
           address: '',
           joinedDate: metadata.joined_date || new Date().toISOString(),
-          role: 'Customer'
+          role: 'Customer',
+          deliveryPlusOwned: false
         };
         const createRes = await fetch('/api/users', {
           method: 'POST',
@@ -107,7 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
         const createdProfile = createRes.ok ? await createRes.json() : newProfile;
         const orders = await fetchUserOrders(id);
-        setUser({ ...createdProfile, orders });
+        setUser({ ...createdProfile, deliveryPlusOwned: Boolean(createdProfile.deliveryPlusOwned), orders });
       } else {
         throw new Error(`Profile request failed with status ${res.status}`);
       }
@@ -120,6 +123,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         phone: '',
         address: '',
         joinedDate: metadata.joined_date || new Date().toISOString(),
+        deliveryPlusOwned: false,
         orders: []
       });
     }
